@@ -10,7 +10,7 @@ The step-by-step tutorial describes all the steps to estimate sensitivity indexe
 ## Examples
 We provide the examples that were used in our publication:
 - Benchmark model (see [here](https://github.com/julemai/SA-MP/wiki/Examples#benchmark-model))
-- RAVEN modeling framework (see [here](https://github.com/julemai/MVA/wiki/Examples#raven-modeling-framework))
+- RAVEN modeling framework (see [here](https://github.com/julemai/SA-MP/wiki/Examples#raven-hydrologic-modeling-framework))
 
 ## Citation
 J Mai, JR Craig, & BA Tolson (2019). <br>
