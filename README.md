@@ -1,4 +1,4 @@
-# Simultaneous Global Sensitivity Analysis of Model Variables and Model Structures: Sensitivity Analysis with Multiple Processes SA-MP
+# Sensitivity Analysis with Multiple Processes (SA-MP): Simultaneous Global Sensitivity Analysis of Model Variables and Model Structures
 *by Juliane Mai, James R Craig, and Bryan A Tolson (University of Waterloo, Canada)*
 
 ## Abstract
@@ -9,7 +9,7 @@ The step-by-step tutorial describes all the steps to estimate sensitivity indexe
 
 ## Examples
 We provide the examples that were used in our publication:
-- benchmark model (see [here](https://github.com/julemai/SA-MP/wiki/Examples#benchmark-model))
+- Benchmark model (see [here](https://github.com/julemai/SA-MP/wiki/Examples#benchmark-model))
 - RAVEN modeling framework (see [here](https://github.com/julemai/MVA/wiki/Examples#raven-modeling-framework))
 
 ## Citation
