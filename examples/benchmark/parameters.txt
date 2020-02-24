@@ -1,0 +1,14 @@
+#Parameter/DV Specification
+BeginParams
+  # parameter     init.    low             high          tx_in  tx_ost   tx_out
+  #
+  par_x01         0.0      -3.14159265     3.14159265    none   none     none # 
+  par_x02         0.0      -3.14159265     3.14159265    none   none     none # 
+  par_x03         0.0      -3.14159265     3.14159265    none   none     none # 
+  par_x04         0.0      -3.14159265     3.14159265    none   none     none # 
+  par_x05         0.0      -3.14159265     3.14159265    none   none     none # 
+  par_x06         0.0      -3.14159265     3.14159265    none   none     none # 
+  par_x07         0.0      -3.14159265     3.14159265    none   none     none #
+  #
+EndParams                                          
+                                                   

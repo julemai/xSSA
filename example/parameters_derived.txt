@@ -1,7 +1,0 @@
-dict_dparas['sum_x24_x25']  = paras[23]+paras[24]         # MAX_MELT_FACTOR > MIN_MELT_FACTOR
-dict_dparas['sum_x13_x14']  = paras[12]+paras[13]         # SNOW_SWI_MAX > SNOW_SWI_MIN
-dict_dparas['half_x29']     = paras[28] * 0.5 * 1000      # half the value but in [mm] not [m]
-dict_dparas['half_x30']     = paras[29] * 0.5 * 1000      # half the value but in [mm] not [m]
-dict_dparas['sum_x09_x10']  = paras[8]+paras[9]           # FIELD_CAPACITY > SAT_WILT
-dict_dparas['pow_x04']      = 10.0**(paras[3])            # BASEFLOW_COEFF TOPSOIL  = 10.0^x4
-dict_dparas['pow_x11']      = 10.0**(paras[10])           # BASEFLOW_COEFF PHREATIC = 10.0^x11

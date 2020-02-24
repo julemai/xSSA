@@ -1,0 +1,42 @@
+#Parameter/DV Specification
+BeginParams
+  # parameter      init.    low      high    tx_in  tx_ost  tx_out
+  #
+  par_x01         0.5      0.0       1.0    none   none     none # LandUseParameterList:    HMETS_RUNOFF_COEFF
+  par_x02         0.5      0.1       3.0    none   none     none # SoilParameterList:       B_EXP TOPSOIL
+  par_x03         0.5      0.5       3.0    none   none     none # SoilParameterList:       HBV_BETA TOPSOIL
+  #
+  par_x04         0.0     -5.0      -1.0    none   none     none # SoilParameterList:       BASEFLOW_COEFF TOPSOIL
+  par_x05         0.5      0.0     100.0    none   none     none # SoilParameterList:       MAX_BASEFLOW_RATE TOPSOIL
+  par_x06         0.5      0.5       2.0    none   none     none # SoilParameterList:       BASEFLOW_N TOPSOIL
+  par_x07         7.5      5.0      10.0    none   none     none # TerrainClasses:          TOPMODEL_LAMBDA
+  #
+  par_x08         0.0      0.0       3.0    none   none     none # SoilParameterList:       PET_CORRECTION TOPSOIL
+  par_x09         0.5      0.0       0.05   none   none     none # SoilParameterList:       SAT_WILT TOPSOIL
+  par_x10         0.5      0.0       0.45   none   none     none # SoilParameterList:       FIELD_CAPACITY TOPSOIL = SAT_WILT TOPSOIL + x9
+  #
+  par_x11         0.00001 -5.0      -2.0    none   none     none # SoilParameterList:       BASEFLOW_COEFF PHREATIC
+  par_x12         0.5      0.5       2.0    none   none     none # SoilParameterList:       BASEFLOW_N PHREATIC
+  #
+  par_x13         0.0      0.0       0.1    none   none     none # GlobalParameter:         SNOW_SWI_MIN
+  par_x14         0.01     0.01      0.3    none   none     none # GlobalParameter:         SNOW_SWI_MAX = SNOW_SWI_MIN + x10
+  par_x15         0.005    0.005     0.1    none   none     none # GlobalParameter:         SWI_REDUCT_COEFF
+  par_x16         0.0     -5.0       2.0    none   none     none # LandUseParameterList:    DD_REFREEZE_TEMP
+  par_x17         1.0      0.0       1.0    none   none     none # LandUseParameterList:    REFREEZE_EXP
+  par_x18         1.0      0.0       5.0    none   none     none # LandUseParameterList:    REFREEZE_FACTOR
+  # par_x19       5.0      1.5       8.0    none   none     none # LandUseParameterList:    MELT_FACTOR
+  par_x19         0.0      0.0       0.4    none   none     none # GlobalParameter:         SNOW_SWI
+  #
+  par_x20         1.0      0.3      20.0    none   none     none # LandUseParameterList:    GAMMA_SHAPE
+  par_x21         1.0      0.01      5.0    none   none     none # LandUseParameterList:    GAMMA_SCALE
+  par_x22         1.0      0.5      13.0    none   none     none # LandUseParameterList:    GAMMA_SHAPE2
+  par_x23         1.0      0.15      1.5    none   none     none # LandUseParameterList:    GAMMA_SCALE2
+  par_x24         1.0      1.5       3.0    none   none     none # LandUseParameterList:    MIN_MELT_FACTOR
+  par_x25         1.0      0.0       5.0    none   none     none # LandUseParameterList:    MAX_MELT_FACTOR = MIN_MELT_FACTOR + x06
+  par_x26         0.0     -1.0       1.0    none   none     none # LandUseParameterList:    DD_MELT_TEMP
+  par_x27         0.1      0.01      0.2    none   none     none # LandUseParameterList:    DD_AGGRADATION
+  par_x28         0.1      0.00001   0.02   none   none     none # SoilParameterList:       PERC_COEFF TOPSOIL
+  par_x29         0.1      0.0       0.5    none   none     none # SoilProfiles:            thickness TOPSOIL (m)
+  par_x30         0.1      0.0       2.0    none   none     none # SoilProfiles:            thickness PHREATIC (m)
+EndParams                                          
+                                                   
