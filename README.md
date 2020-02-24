@@ -14,8 +14,8 @@ The step-by-step tutorial describes all the steps to estimate sensitivity indexe
 ## Examples
 We provide the examples that were used in our publication:
 - Benchmark model (see [here](https://github.com/julemai/xSSA/wiki/Examples#benchmark-model))
-- Salmon River catchment using RAVEN modeling framework (see [here](https://github.com/julemai/xSSA/wiki/Examples#raven-hydrologic-modeling-framework-Salmon-River))
-- MOPEX 12 using RAVEN modeling framework (see [here](https://github.com/julemai/xSSA/wiki/Examples#raven-hydrologic-modeling-framework-MOPEX-12))
+- Salmon River catchment using RAVEN modeling framework (see [here](https://github.com/julemai/xSSA/wiki/Examples#salmon-river-catchment-using-raven-hydrologic-modeling-framework))
+- MOPEX 12 using RAVEN modeling framework (see [here](https://github.com/julemai/xSSA/wiki/Examples#mopex-12-using-raven-hydrologic-modeling-framework))
 
 ## Setup your own model
 This section provides you with a guideline on how to setup your own model and run a sensitivity analysis for your model. Details can be found [here](https://github.com/julemai/xSSA/wiki/Setup-your-own-model).
