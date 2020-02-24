@@ -7,14 +7,14 @@
 #     depend on parameters)
 #   - parameter names must correspond to names in 'parameters.txt')
 #
-[[par_x01, par_x29],[par_x02, par_x29],[par_x03, par_x29]],                             # parameters of infiltration                 options     
-[[par_x04, par_x29],[par_x05, par_x06, par_x29],[par_x05, par_x06, par_x07, par_x29]],  # parameters of quickflow                    options
-[[par_x08, par_x29],[par_x08, par_x09, par_x10, par_x29]],                              # parameters of evaporation                  options
-[[par_x11],[par_x11, par_x12]],								# parameters of baseflow                     options
-[[par_x13, par_x14, par_x15, par_x16, par_x17, par_x18],[],[par_x18, par_x19]],         # parameters of snow balance                 options
-[[par_x20, par_x21]],									# parameters for convolution (surf. runoff)  option
-[[par_x22, par_x23]],									# parameters for convolution (delay. runoff) option
-[[par_x24, par_x25, par_x26, par_x27]],							# parameters for potential melt              option
-[[par_x28, par_x29, par_x30]],								# parameters for percolation                 option
+[[par_x01, par_x29],[par_x02, par_x29],[par_x03, par_x29]]				# parameters of infiltration                 options     
+[[par_x04, par_x29],[par_x05, par_x06, par_x29],[par_x05, par_x06, par_x07, par_x29]]	# parameters of quickflow                    options
+[[par_x08, par_x29],[par_x08, par_x09, par_x10, par_x29]]				# parameters of evaporation                  options
+[[par_x11],[par_x11, par_x12]]								# parameters of baseflow                     options
+[[par_x13, par_x14, par_x15, par_x16, par_x17, par_x18],[],[par_x18, par_x19]]		# parameters of snow balance                 options
+[[par_x20, par_x21]]									# parameters for convolution (surf. runoff)  option
+[[par_x22, par_x23]]									# parameters for convolution (delay. runoff) option
+[[par_x24, par_x25, par_x26, par_x27]]							# parameters for potential melt              option
+[[par_x28, par_x29, par_x30]]								# parameters for percolation                 option
 
                                                    
