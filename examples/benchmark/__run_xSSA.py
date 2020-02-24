@@ -19,7 +19,7 @@
 # along with Juliane Mai's personal code library.  If not, see <http://www.gnu.org/licenses/>.
 #
 # run with:
-#     run __run_xSSA.py -n 1000
+#     run __run_xSSA.py -n 1000 -o output.pkl
 
 #!/usr/bin/env python
 from __future__ import print_function
