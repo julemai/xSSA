@@ -22,6 +22,6 @@ This section provides you with a guideline on how to setup your own model and ru
 
 ## Citation
 J Mai, JR Craig, and BA Tolson (2019). <br>
-Simultaneous Global Sensitivity Analysis of Model Variables and Model Structures. <br>
+The Extended Sobol' Sensitivity Analysis xSSA Simultaneously Determining Global Sensitivities of Model Parameters and Model Structure. <br>
 *Water Resources Research*, ??, ??.<br>
 https://doi.org/??/??
