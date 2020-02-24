@@ -8,17 +8,11 @@ Model structure uncertainty is known to be one of the three main sources of hydr
 3. The xSSA method applied to the case study showed that surface processes were responsible for 80.3% of the overall model variability in a mountainous catchment; such information may readily inform model calibration. 
 4. The analysis of time dependent process sensitivities is a helpful tool to understand model internal dynamics over the course of the year.
 
-## Step-by-step tutorial
-The step-by-step tutorial describes all the steps to estimate sensitivity indexes for a model that allows for multiple process options such as the hydrologic modeling framework [RAVEN](http://raven.uwaterloo.ca). It explains step-by-step on how to setup and adjust the provided codes. Details can be found [here](https://github.com/julemai/xSSA/wiki/Step-by-step-tutorial).
-
 ## Examples
 We provide the examples that were used in our publication:
 - Benchmark model (see [here](https://github.com/julemai/xSSA/wiki/Examples#benchmark-model))
 - Salmon River catchment using RAVEN modeling framework (see [here](https://github.com/julemai/xSSA/wiki/Examples#salmon-river-catchment-using-raven-hydrologic-modeling-framework))
 - MOPEX 12 using RAVEN modeling framework (see [here](https://github.com/julemai/xSSA/wiki/Examples#mopex-12-using-raven-hydrologic-modeling-framework))
-
-## Setup your own model
-This section provides you with a guideline on how to setup your own model and run a sensitivity analysis for your model. Details can be found [here](https://github.com/julemai/xSSA/wiki/Setup-your-own-model).
 
 ## Citation
 J Mai, JR Craig, and BA Tolson (2019). <br>
