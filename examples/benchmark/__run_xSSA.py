@@ -60,10 +60,14 @@ if __name__ == '__main__':
     import sa_model_multiple_processes                # in lib/
 
     do_weighted_model    = True     # SA of weighted benchmark model 
-    do_individual_models = True     # SA of every single model structure of benchamrk model
+    do_individual_models = True     # SA of every single model structure of benchmark model
+    
+    basin_prop           = {'id': 'bench'}
 
     nsets    = 1000          # number of reference parameter sets
     outfile  = None          # output file name stroing model runs, e.g., 'results_realistic-benchmark-model.pkl'
+    tmp_folder  = "/tmp/xSSA-test/"   # temporary folder to run model
+    
     parser   = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                       description='''Benchmark example to test Sensitivity Analysis for models with multiple process options.''')
     parser.add_argument('-o', '--outfile', action='store',
@@ -155,14 +159,15 @@ if __name__ == '__main__':
         if ( (li != '') and not(li.startswith('BeginParams')) and not(li.startswith('EndParams')) ):
 
             # [[par_x01], [par_x01, par_x02]]   -->   [['par_x01'], ['par_x01', 'par_x02']]
+            li = ''.join(li.split())   # remove whitespaces
             li = li.replace('[','').replace(' ','').split('],')
             li = [ s.replace(']','').split(',') for s in li ]
 
             # find correct ID: [['par_x01'], ['par_x01', 'par_x02']] --> [[0],[0,1]]
-            idx = [ [ paras.keys().index(item) for item in ilist ] for ilist in li ]
+            idx = [ [ paras.keys().index(item) for item in ilist if (item != '') ] for ilist in li ]
             options_paras_realistic += [idx]
 
-    def model_function_realistic(paras, weights, constants=None, run_id=None):
+    def model_function_realistic(paras, weights, basin_prop, constants=None, run_id=None, tmp_folder=tmp_folder):
         # input:
         #     paras     ... list of model parameters scaled to their range;
         #                   values for all N model parameters have to be provided
@@ -173,6 +178,9 @@ if __name__ == '__main__':
         #                   each sublist is the N_i weights for the N_i process options of process i;
         #                   example:
         #                        [ [w_a1, w_a2, ...], [w_b1, w_b2, w_b3, ...], [w_c1, w_c2, ...], ... ]
+        #     basin_prop ... only 'id' needed to assign tmp-folder names
+        #                    example:
+        #                         {'id':           '01013500'}
         #     constants ... optional list of constants that are same for all models;
         #                   like parameters a and b in Ishigami-Homma function
         #                   example:
@@ -250,11 +258,12 @@ if __name__ == '__main__':
 
         print('')
         print('SA of realistic setup: nsets = ',nsets)
-        
+
         sobol_indexes_realistic[str(nsets)] = sa_model_multiple_processes.sa_model_multiple_processes(options_paras_realistic,
                                                                                                      para_ranges,
                                                                                                      model_function_realistic,
                                                                                                      constants=None,
+                                                                                                     basin_prop=basin_prop,
                                                                                                      nsets=nsets)
 
         # parameter sensitivities
@@ -376,7 +385,7 @@ if __name__ == '__main__':
                     # --------------------
                     # Run model for A-sets
                     # --------------------
-                    f_a = np.array([ model_function_realistic(block_a_paras[iset], block_weights_nested, constants=[para_a,para_b])['out'] for iset in range(nsets) ])
+                    f_a = np.array([ model_function_realistic(block_a_paras[iset], block_weights_nested, basin_prop, constants=[para_a,para_b])['out'] for iset in range(nsets) ])
                     model_runs += nsets
 
                     # --------------------
@@ -389,7 +398,7 @@ if __name__ == '__main__':
                     # --------------------
                     # Run model for B-sets
                     # --------------------
-                    f_b = np.array([ model_function_realistic(block_b_paras[iset], block_weights_nested, constants=[para_a,para_b])['out'] for iset in range(nsets) ])
+                    f_b = np.array([ model_function_realistic(block_b_paras[iset], block_weights_nested, basin_prop, constants=[para_a,para_b])['out'] for iset in range(nsets) ])
                     model_runs += nsets
 
                     # --------------------
@@ -410,7 +419,7 @@ if __name__ == '__main__':
                         # --------------------
                         # Run model for Ci-sets
                         # --------------------
-                        f_c[iipara,:] = np.array([ model_function_realistic(block_c_paras[iset], block_weights_nested, constants=[para_a,para_b])['out'] for iset in range(nsets) ])
+                        f_c[iipara,:] = np.array([ model_function_realistic(block_c_paras[iset], block_weights_nested, basin_prop, constants=[para_a,para_b])['out'] for iset in range(nsets) ])
                         model_runs += nsets
 
                     # --------------------
