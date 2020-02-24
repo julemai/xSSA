@@ -59,7 +59,7 @@ if __name__ == '__main__':
     import sa_model_multiple_processes                # in lib/
 
     do_weighted_model    = True     # SA of weighted benchmark model 
-    do_individual_models = False    # SA of every single model structure of benchamrk model
+    do_individual_models = True     # SA of every single model structure of benchamrk model
 
     nsets    = 1000          # number of reference parameter sets
     outfile  = None          # output file name stroing model runs, e.g., 'results_realistic-benchmark-model.pkl'
@@ -332,10 +332,10 @@ if __name__ == '__main__':
                     print("Model: ",model_str)
                     print("SA:    each parameter")
 
-                    npara_a = len(options_paras_realistic[0][ioption_a])
-                    npara_b = len(options_paras_realistic[1][ioption_b])
-                    npara_c = len(options_paras_realistic[2][ioption_c])
-                    nnparas = npara_a + npara_b + npara_c
+                    paras_active_a = options_paras_realistic[0][ioption_a]
+                    paras_active_b = options_paras_realistic[1][ioption_b]
+                    paras_active_c = options_paras_realistic[2][ioption_c]
+                    nnparas = len(np.unique(paras_active_a+paras_active_b+paras_active_c))
 
                     # --------------------
                     # Weights for current set of options to 1.0; others are 0.0
@@ -361,7 +361,7 @@ if __name__ == '__main__':
                     # --------------------
                     # Run model for A-sets
                     # --------------------
-                    f_a = np.array([ model_function_realistic(block_a_paras[iset], block_weights_nested, constants=[para_a,para_b]) for iset in range(nsets) ])
+                    f_a = np.array([ model_function_realistic(block_a_paras[iset], block_weights_nested, constants=[para_a,para_b])['out'] for iset in range(nsets) ])
                     model_runs += nsets
 
                     # --------------------
@@ -374,13 +374,13 @@ if __name__ == '__main__':
                     # --------------------
                     # Run model for B-sets
                     # --------------------
-                    f_b = np.array([ model_function_realistic(block_b_paras[iset], block_weights_nested, constants=[para_a,para_b]) for iset in range(nsets) ])
+                    f_b = np.array([ model_function_realistic(block_b_paras[iset], block_weights_nested, constants=[para_a,para_b])['out'] for iset in range(nsets) ])
                     model_runs += nsets
 
                     # --------------------
                     # list of parameters active in this set of options
                     # --------------------
-                    col_changes_Ci = options_paras_realistic[0][ioption_a]+options_paras_realistic[1][ioption_b]+options_paras_realistic[2][ioption_c]
+                    col_changes_Ci = np.unique(options_paras_realistic[0][ioption_a]+options_paras_realistic[1][ioption_b]+options_paras_realistic[2][ioption_c])
                     nnparas = len(col_changes_Ci)
                     
                     f_c = np.ones([nnparas,nsets])*-9999.0
@@ -395,7 +395,7 @@ if __name__ == '__main__':
                         # --------------------
                         # Run model for Ci-sets
                         # --------------------
-                        f_c[iipara,:] = np.array([ model_function_realistic(block_c_paras[iset], block_weights_nested, constants=[para_a,para_b]) for iset in range(nsets) ])
+                        f_c[iipara,:] = np.array([ model_function_realistic(block_c_paras[iset], block_weights_nested, constants=[para_a,para_b])['out'] for iset in range(nsets) ])
                         model_runs += nsets
 
                     # --------------------
@@ -415,5 +415,9 @@ if __name__ == '__main__':
                     print("   sti analytic ("+paras_str+") = ",astr(sti_theo,prec=5))
                     print("   mae error    ("+paras_str+") = ",np.mean(np.array(list(np.abs(si_theo-si))+list(np.abs(sti_theo-sti)))))
 
-        print('----> total number of model runs: ', model_runs)
+        print("")
+        print("------------------------------")
+        print("Budget")
+        print("------------------------------")
+        print("    Parameters:      ",model_runs)
 
