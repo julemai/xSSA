@@ -533,7 +533,7 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, b
     # (D) f_A and f_B
     block_a_weights_nested = random_to_weights_to_nested(block_a_weights,noptions)
     # f_a = np.array([ model_function(block_a_paras[iset], block_a_weights_nested[iset], basin_prop, constants=constants, run_id=basin_prop['id']+"_a_set_"+str(iset)) for iset in range(nsets) ])
-    print('block_a_weights = ',block_a_weights)
+    # print('block_a_weights = ',block_a_weights)
     f_a = np.array([ model_function(block_a_paras[iset], block_a_weights_nested[iset], basin_prop, constants=constants, run_id=basin_prop['id']+"_a_set") for iset in range(nsets) ])
     # print('block_a_paras   = ',block_a_paras)
     # print('block_a_weights = ',block_a_weights)
@@ -595,7 +595,7 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, b
             ntime[ikey] = np.shape(f_b[ikey])[0]
         else:
             ntime[ikey] = 0
-    print('ntime = ',ntime)
+    # print('ntime = ',ntime)
     # store to save in pickle later
     if not( (save_pkl is None) and (save_json is None) ):
         save_to_file["ntime"] = ntime
