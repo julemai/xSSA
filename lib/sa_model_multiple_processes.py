@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-# Copyright 2019 Juliane Mai - juliane.mai(at)uwaterloo.ca
+# Copyright 2019-2020 Juliane Mai - juliane.mai(at)uwaterloo.ca
 #
 # License
 # This file is part of Juliane Mai's personal code library.
@@ -23,12 +23,22 @@
 
 #!/usr/bin/env python
 from __future__ import print_function
+from __future__ import with_statement
+
+# -----------------------
+# add subolder scripts/lib to search path
+# -----------------------
+import sys
+import os
+dir_path = os.path.dirname(os.path.realpath(__file__))
+sys.path.append(dir_path+'/lib')
 
 import numpy as np
 import copy
 import sobol
 import sobol_index
 import pickle
+import json
 from autostring import astr
 import PieShareDistribution as psd
 from collections import OrderedDict
@@ -36,7 +46,7 @@ from collections import OrderedDict
 __all__ = ['sa_model_multiple_processes']
 
 """
-Perform Sensitivity Analysis for models with multiple process options. 
+Perform Sensitivity Analysis for models with multiple process options.
 Derives Sensitivity index estimates for:
 - each parameter          (p1, p2, p3, p4, ...)
 - each process option     (A1, A2, ..., B1, B2, ...)
@@ -47,13 +57,13 @@ History
 Written,  JM, Jun 2019
 """
 
-def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, constants=None, nsets=None, budget=None, save=None):
+def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, basin_prop=None, constants=None, nsets=None, budget=None, save_pkl=None, save_json=None):
     """
-        This function that estimates the Sobol' sensitivity estimates for models with mutiple process options. 
-        The options and the parameters of those options are given in a nested list 'paras_per_option'. 
-        Further, the range of each parameter needs to be given and a function that returns model outputs 
-        when a set of parameters and weights are given. The weights are used to weight all the process option 
-        outputs. Hence, the returned model output is a weighted model output. The sampling of all weights and 
+        This function that estimates the Sobol' sensitivity estimates for models with mutiple process options.
+        The options and the parameters of those options are given in a nested list 'paras_per_option'.
+        Further, the range of each parameter needs to be given and a function that returns model outputs
+        when a set of parameters and weights are given. The weights are used to weight all the process option
+        outputs. Hence, the returned model output is a weighted model output. The sampling of all weights and
         parameters is done internally in this method. Sobol' sequences are used for this purpose.
 
         Definition
@@ -82,22 +92,32 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
                                                          'NSE':      0.6,
                                                          'baseflow': np.array([20.5,23.5,...,24.5])
                                                        }
-                                                 - the internal sampling will make sure that all weights are between 0 and 1 
+                                                 - the internal sampling will make sure that all weights are between 0 and 1
                                                    and sum up to 1 for each process
-                                                 - interface must look like: 
-                                                   model_function(set_of_parameters, set_of_weights, constants=constants, run_id=None) 
+                                                 - interface must look like:
+                                                   model_function(set_of_parameters, set_of_weights, constants=constants, run_id=None)
                                                  - weights are given as nested list of list (similar to 'paras_per_option')
-                                                 example: 
+                                                 example:
                                                        def model_function(pp,ww,constant=None,run_id=None):
                                                             # process A
-                                                            proc_a = ww[0][0] * (pp[0]**2+pp[1]) + ww[0][1] * (sin(pp[0]))                  
+                                                            proc_a = ww[0][0] * (pp[0]**2+pp[1]) + ww[0][1] * (sin(pp[0]))
                                                             # process B
-                                                            proc_b = ww[1][0] * (pp[2]**4+pp[3]**2) + ww[1][1] * (7.0)                      
+                                                            proc_b = ww[1][0] * (pp[2]**4+pp[3]**2) + ww[1][1] * (7.0)
                                                             # process C
-                                                            proc_c = ww[2][0] * (9.81) + ww[2][1] * (pp[4]+cos(pp[5])) + ww[2][2] * pp[4]   
+                                                            proc_c = ww[2][0] * (9.81) + ww[2][1] * (pp[4]+cos(pp[5])) + ww[2][2] * pp[4]
                                                             # model output: this is totally fake...
                                                             model['out'] = proc_a * proc_b + proc_c
                                                             return model
+        basin_prop          dictionary           basin properties
+                                                 example:
+                                                       {'area_km2':     2303.95,
+                                                        'elevation_m':  250.31,
+                                                        'forest_frac':  0.9063,
+                                                        'id':           '01013500',
+                                                        'lat_deg':      47.23739,
+                                                        'lon_deg':      -68.58264,
+                                                        'name':         'Fish River near Fort Kent, Maine',
+                                                        'slope_m_km-1': 21.64152}
         constants           list                 optional: list of constants that 'model_function' might need
                                                  default: None
         nsets               integer              optional: number of reference parameter sets
@@ -105,9 +125,11 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
         budget              integer              optional: total number of model runs allowed for analysis; overwrites nsets
                                                  budget = nsets / ((nprocess+2)+(nweights+np.sum(noptions)+2)+(nparas+nweights+2))
                                                  default: None
-        save                string               filename to save parameter sets and respective model outputs in pickle file
+        save_pkl            string               filename to save parameter sets and respective model outputs in pickle file (slow but small but requires lots of RAM)
                                                  default: None (nothing saved to file)
-        
+        save_json           string               filename to save parameter sets and respective model outputs in JSON file (fast but large files but requires not a lot of RAM)
+                                                 default: None (nothing saved to file)
+
 
         Output          Format        Description
         -----           -----         -----------
@@ -140,12 +162,12 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
 
         Description
         -----------
-        
+
 
 
         Restrictions
         ------------
-        Parameters can only be uniformly distributed in a range [a,b]. 
+        Parameters can only be uniformly distributed in a range [a,b].
         No Gaussian distribution etc possible yet.
 
         Examples
@@ -160,12 +182,12 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
 
         >>> # list of parameters that go into each option (numbering starts with 0)
         >>> # (a) simple setup
-        >>> paras_per_option = [ 
+        >>> paras_per_option = [
         ...       [[0], []],             # parameters of process options A1 and A2
         ...       [[1], [2], [3,4]],     # parameters of process options B1, B2, and B3
         ...       [[5], [6]]             # parameters of process options A1 and A2
         ...     ]
-        >>> para_ranges = [ 
+        >>> para_ranges = [
         ...       [-np.pi,np.pi],      # parameter range of x1
         ...       [-np.pi,np.pi],      # parameter range of x2
         ...       [-np.pi,np.pi],      # parameter range of x3
@@ -173,8 +195,16 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
         ...       [-np.pi,np.pi],      # parameter range of x5
         ...       [-np.pi,np.pi],      # parameter range of x6
         ...       [-np.pi,np.pi]       # parameter range of x7
-        ...     ]   
-        >>> def model_function(paras, weights, constants=None, run_id=None):
+        ...     ]
+        >>> basin_prop = {'area_km2':     2303.95,
+        ...               'elevation_m':  250.31,
+        ...               'forest_frac':  0.9063,
+        ...               'id':           '01013500',
+        ...               'lat_deg':      47.23739,
+        ...               'lon_deg':      -68.58264,
+        ...               'name':         'Fish River near Fort Kent, Maine',
+        ...               'slope_m_km-1': 21.64152}
+        >>> def model_function(paras, weights, basin_prop, constants=None, run_id=None):
         ...     # input:
         ...     #     paras     ... list of model parameters scaled to their range;
         ...     #                   values for all N model parameters have to be provided
@@ -218,7 +248,7 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
         ...     if (len(paras) != 7):
         ...         print("Number of parameters: ",len(paras))
         ...         raise ValueError("sa_model_multiple_processes: model_function: provided number of parameters must be 7")
-        ...        
+        ...
         ...     out = 0.0
         ...
         ...     if constants is None:
@@ -231,7 +261,7 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
         ...     # ---------------
         ...     # simple model
         ...     # ---------------
-        ...        
+        ...
         ...     # process A
         ...     out += ( weights[0][0] * np.sin(paras[0]) +              # A1
         ...              weights[0][1] * 1.0 )                           # A2
@@ -244,151 +274,164 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
         ...              weights[2][1] * (1.0 + bb * paras[6]**4) )      # C2
         ...
         ...     model = {}
-        ...     model['result'] = out
+        ...     model['result_0d'] = out
+        ...     model['result_1d'] = np.array( [ out for itime in range(4) ] )
         ...
         ...     return model
 
         >>> # this is calling the actual tool
-        >>> sobol_indexes = sa_model_multiple_processes(paras_per_option, para_ranges, model_function, constants=None, nsets=nsets)
+        >>> sobol_indexes = sa_model_multiple_processes(paras_per_option, para_ranges, model_function, basin_prop, nsets=nsets)
 
         >>> # printing
-        >>> print("parameter sensitivities:      S_xi  = ",astr(sobol_indexes['paras']['si']['result'],prec=5))
+        >>> print("parameter sensitivities:      S_xi  = ",astr(sobol_indexes['paras']['si']['result_0d'],prec=5))
         parameter sensitivities:      S_xi  =  [' 0.02295' ' 0.02361' '-0.00099' ' 0.00048' ' 0.00056' ' 0.00061' ' 0.49380' '-0.00491' ' 0.02107' ' 0.00436' ' 0.09056']
-        >>> print("parameter sensitivities:      ST_xi = ",astr(sobol_indexes['paras']['sti']['result'],prec=5))
+        >>> print("parameter sensitivities:      ST_xi = ",astr(sobol_indexes['paras']['sti']['result_0d'],prec=5))
         parameter sensitivities:      ST_xi =  ['0.06706' '0.16565' '0.00204' '0.00075' '0.00074' '0.00047' '0.64679' '0.08102' '0.11487' '0.00187' '0.24561']
-        >>> print("process option sensitivities: S_Ai  = ",astr(sobol_indexes['process_options']['si']['result'],prec=5))
+        >>> print("process option sensitivities: S_Ai  = ",astr(sobol_indexes['process_options']['si']['result_0d'],prec=5))
         process option sensitivities: S_Ai  =  [' 0.02295' ' 0.00000' ' 0.02361' '-0.00099' ' 0.00105' ' 0.00061' ' 0.49380' '-0.00491' ' 0.02107' ' 0.00436' ' 0.09056']
-        >>> print("process option sensitivities: ST_Ai = ",astr(sobol_indexes['process_options']['sti']['result'],prec=5))
+        >>> print("process option sensitivities: ST_Ai = ",astr(sobol_indexes['process_options']['sti']['result_0d'],prec=5))
         process option sensitivities: ST_Ai =  ['0.06706' '0.00000' '0.16565' '0.00204' '0.00153' '0.00047' '0.64679' '0.08102' '0.11487' '0.00187' '0.24561']
-        >>> print("process sensitivities:        S_A   = ",astr(sobol_indexes['processes']['si']['result'],prec=5))
+        >>> print("process sensitivities:        S_A   = ",astr(sobol_indexes['processes']['si']['result_0d'],prec=5))
         process sensitivities:        S_A   =  ['0.03576' '0.05918' '0.76269']
-        >>> print("process sensitivities:        ST_A  = ",astr(sobol_indexes['processes']['sti']['result'],prec=5))
+        >>> print("process sensitivities:        ST_A  = ",astr(sobol_indexes['processes']['sti']['result_0d'],prec=5))
         process sensitivities:        ST_A  =  ['0.13269' '0.20039' '0.74577']
+        >>> print("process sensitivities:        ST_A_msti  = ",astr(sobol_indexes['processes']['msti']['result_1d'],prec=5))
+        process sensitivities:        ST_A_msti  =  ['0.13269' '0.20039' '0.74577']
+        >>> print("process sensitivities:        ST_A_wsti  = ",astr(sobol_indexes['processes']['wsti']['result_1d'],prec=5))
+        process sensitivities:        ST_A_wsti  =  ['0.13269' '0.20039' '0.74577']
 
-        --------------------------------------------------
-        Realistic setup
-        --------------------------------------------------
+        # --------------------------------------------------
+        # Realistic setup
+        # --------------------------------------------------
 
-        >>> # list of parameters that go into each option (numbering starts with 0)
-        >>> # (a) simple setup
-        >>> paras_per_option = [ 
-        ...       [[0], [0,1]],             # parameters of process options A1 and A2
-        ...       [[1], [2], [3,4]],        # parameters of process options B1, B2, and B3
-        ...       [[5], [2,6]]              # parameters of process options A1 and A2
-        ...     ]
-        >>> para_ranges = [ 
-        ...       [-np.pi,np.pi],      # parameter range of x1
-        ...       [-np.pi,np.pi],      # parameter range of x2
-        ...       [-np.pi,np.pi],      # parameter range of x3
-        ...       [-np.pi,np.pi],      # parameter range of x4
-        ...       [-np.pi,np.pi],      # parameter range of x5
-        ...       [-np.pi,np.pi],      # parameter range of x6
-        ...       [-np.pi,np.pi]       # parameter range of x7
-        ...     ]   
-        >>> def model_function(paras, weights, constants=None, run_id=None):
-        ...     # input:
-        ...     #     paras     ... list of model parameters scaled to their range;
-        ...     #                   values for all N model parameters have to be provided
-        ...     #                   example:
-        ...     #                        [ x1, x2, x3, x4, .... ]
-        ...     #     weights   ... list of lists of weights to weight options of each process;
-        ...     #                   each list of the lists need to sum up to 1.0;
-        ...     #                   each sublist is the N_i weights for the N_i process options of process i;
-        ...     #                   example:
-        ...     #                        [ [w_a1, w_a2, ...], [w_b1, w_b2, w_b3, ...], [w_c1, w_c2, ...], ... ]
-        ...     #     constants ... optional list of constants that are same for all models;
-        ...     #                   like parameters a and b in Ishigami-Homma function
-        ...     #                   example:
-        ...     #                        [2.0, 1.0]
-        ...     # output:
-        ...     #     model output
-        ...     #     example:
-        ...     #           { 'Q':        np.array([2.5,3.5,...,4.5]),
-        ...     #             'NSE':      0.6,
-        ...     #             'baseflow': np.array([20.5,23.5,...,24.5])
-        ...     #           }
-        ...
-        ...     # check that provided number of weights is correct:
-        ...     # --> one weight per option per process
-        ...     if ( [len(ilist) for ilist in weights] != [2,3,2] ):
-        ...         print("Number of weights: ",[len(ilist) for ilist in weights])
-        ...         raise ValueError("sa_model_multiple_processes: model_function: provided number of weights must be [2,3,2]")
-        ...     # check if sum up to 1.0:
-        ...     if ( np.any(np.array([np.sum(ilist) for ilist in weights]) != 1.0) ):
-        ...         print("Sum of weights per process: ",[np.sum(ilist) for ilist in weights])
-        ...         raise ValueError("sa_model_multiple_processes: model_function: sum of weights must be 1.0 for all processes")
-        ...     # check if weights <= 1.0:
-        ...     if ( np.any(np.array([item for ilist in weights for item in ilist]) > 1.0) ):
-        ...         print("Weights: ",weights)
-        ...         raise ValueError("sa_model_multiple_processes: model_function: weights must be all less or equal 1.0")
-        ...     # check if weights >= 0.0:
-        ...     if ( np.any(np.array([item for ilist in weights for item in ilist]) < 0.0) ):
-        ...         print("Weights: ",weights)
-        ...         raise ValueError("sa_model_multiple_processes: model_function: weights must be all greater or equal 0.0")
-        ...     # check if number of parameters is correct:
-        ...     if (len(paras) != 7):
-        ...         print("Number of parameters: ",len(paras))
-        ...         raise ValueError("sa_model_multiple_processes: model_function: provided number of parameters must be 7")
-        ...        
-        ...     out = 0.0
-        ...
-        ...     if constants is None:
-        ...         aa = 2.0
-        ...         bb = 1.0
-        ...     else:
-        ...         aa = constants[0]
-        ...         bb = constants[1]
-        ...
-        ...     # ---------------
-        ...     # realistic model
-        ...     # ---------------
-        ...
-        ...     # process D
-        ...     out += ( weights[0][0] * np.sin(paras[0]) +                            # D1
-        ...              weights[0][1] * (paras[0]+paras[1]**2) )                      # D2
-        ...     # process E
-        ...     out *= ( weights[1][0] * (1.0 + bb * paras[1]**4) +                    # E1
-        ...              weights[1][1] * (1.0 + bb * paras[2]**2) +                    # E2
-        ...              weights[1][2] * (paras[3] + bb * paras[4]) )                  # E3
-        ...     # process F
-        ...     out += ( weights[2][0] * (aa * np.sin(paras[5])**2) +                  # F1          
-        ...              weights[2][1] * (1.0 + bb * paras[6]**4) + paras[2]**2 )      # F2
-        ...
-        ...     model = {}
-        ...     model['result'] = out
-        ...
-        ...     return model
+        # >>> # list of parameters that go into each option (numbering starts with 0)
+        # >>> # (a) simple setup
+        # >>> paras_per_option = [
+        # ...       [[0], [0,1]],             # parameters of process options A1 and A2
+        # ...       [[1], [2], [3,4]],        # parameters of process options B1, B2, and B3
+        # ...       [[5], [2,6]]              # parameters of process options A1 and A2
+        # ...     ]
+        # >>> para_ranges = [
+        # ...       [-np.pi,np.pi],      # parameter range of x1
+        # ...       [-np.pi,np.pi],      # parameter range of x2
+        # ...       [-np.pi,np.pi],      # parameter range of x3
+        # ...       [-np.pi,np.pi],      # parameter range of x4
+        # ...       [-np.pi,np.pi],      # parameter range of x5
+        # ...       [-np.pi,np.pi],      # parameter range of x6
+        # ...       [-np.pi,np.pi]       # parameter range of x7
+        # ...     ]
+        # >>> basin_prop = {'area_km2':     2303.95,
+        # ...               'elevation_m':  250.31,
+        # ...               'forest_frac':  0.9063,
+        # ...               'id':           '01013500',
+        # ...               'lat_deg':      47.23739,
+        # ...               'lon_deg':      -68.58264,
+        # ...               'name':         'Fish River near Fort Kent, Maine',
+        # ...               'slope_m_km-1': 21.64152}
+        # >>> def model_function(paras, weights, constants=None, run_id=None):
+        # ...     # input:
+        # ...     #     paras     ... list of model parameters scaled to their range;
+        # ...     #                   values for all N model parameters have to be provided
+        # ...     #                   example:
+        # ...     #                        [ x1, x2, x3, x4, .... ]
+        # ...     #     weights   ... list of lists of weights to weight options of each process;
+        # ...     #                   each list of the lists need to sum up to 1.0;
+        # ...     #                   each sublist is the N_i weights for the N_i process options of process i;
+        # ...     #                   example:
+        # ...     #                        [ [w_a1, w_a2, ...], [w_b1, w_b2, w_b3, ...], [w_c1, w_c2, ...], ... ]
+        # ...     #     constants ... optional list of constants that are same for all models;
+        # ...     #                   like parameters a and b in Ishigami-Homma function
+        # ...     #                   example:
+        # ...     #                        [2.0, 1.0]
+        # ...     # output:
+        # ...     #     model output
+        # ...     #     example:
+        # ...     #           { 'Q':        np.array([2.5,3.5,...,4.5]),
+        # ...     #             'NSE':      0.6,
+        # ...     #             'baseflow': np.array([20.5,23.5,...,24.5])
+        # ...     #           }
+        # ...
+        # ...     # check that provided number of weights is correct:
+        # ...     # --> one weight per option per process
+        # ...     if ( [len(ilist) for ilist in weights] != [2,3,2] ):
+        # ...         print("Number of weights: ",[len(ilist) for ilist in weights])
+        # ...         raise ValueError("sa_model_multiple_processes: model_function: provided number of weights must be [2,3,2]")
+        # ...     # check if sum up to 1.0:
+        # ...     if ( np.any(np.array([np.sum(ilist) for ilist in weights]) != 1.0) ):
+        # ...         print("Sum of weights per process: ",[np.sum(ilist) for ilist in weights])
+        # ...         raise ValueError("sa_model_multiple_processes: model_function: sum of weights must be 1.0 for all processes")
+        # ...     # check if weights <= 1.0:
+        # ...     if ( np.any(np.array([item for ilist in weights for item in ilist]) > 1.0) ):
+        # ...         print("Weights: ",weights)
+        # ...         raise ValueError("sa_model_multiple_processes: model_function: weights must be all less or equal 1.0")
+        # ...     # check if weights >= 0.0:
+        # ...     if ( np.any(np.array([item for ilist in weights for item in ilist]) < 0.0) ):
+        # ...         print("Weights: ",weights)
+        # ...         raise ValueError("sa_model_multiple_processes: model_function: weights must be all greater or equal 0.0")
+        # ...     # check if number of parameters is correct:
+        # ...     if (len(paras) != 7):
+        # ...         print("Number of parameters: ",len(paras))
+        # ...         raise ValueError("sa_model_multiple_processes: model_function: provided number of parameters must be 7")
+        # ...
+        # ...     out = 0.0
+        # ...
+        # ...     if constants is None:
+        # ...         aa = 2.0
+        # ...         bb = 1.0
+        # ...     else:
+        # ...         aa = constants[0]
+        # ...         bb = constants[1]
+        # ...
+        # ...     # ---------------
+        # ...     # realistic model
+        # ...     # ---------------
+        # ...
+        # ...     # process D
+        # ...     out += ( weights[0][0] * np.sin(paras[0]) +                            # D1
+        # ...              weights[0][1] * (paras[0]+paras[1]**2) )                      # D2
+        # ...     # process E
+        # ...     out *= ( weights[1][0] * (1.0 + bb * paras[1]**4) +                    # E1
+        # ...              weights[1][1] * (1.0 + bb * paras[2]**2) +                    # E2
+        # ...              weights[1][2] * (paras[3] + bb * paras[4]) )                  # E3
+        # ...     # process F
+        # ...     out += ( weights[2][0] * (aa * np.sin(paras[5])**2) +                  # F1
+        # ...              weights[2][1] * (1.0 + bb * paras[6]**4) + paras[2]**2 )      # F2
+        # ...
+        # ...     model = {}
+        # ...     model['result'] = out
+        # ...
+        # ...     return model
 
-        >>> # this is calling the actual tool
-        >>> sobol_indexes = sa_model_multiple_processes(paras_per_option, para_ranges, model_function, constants=None, nsets=nsets)
+        # >>> # this is calling the actual tool
+        # >>> sobol_indexes = sa_model_multiple_processes(paras_per_option, para_ranges, model_function, basin_prop, nsets=nsets)
 
-        >>> # printing
-        >>> print("parameter sensitivities:      S_xi  = ",astr(sobol_indexes['paras']['si']['result'],prec=5))
-        parameter sensitivities:      S_xi  =  [' 0.02671' ' 0.40059' ' 0.00444' ' 0.00133' ' 0.00112' '-0.00009' ' 0.04133' ' 0.03133' ' 0.07610' ' 0.00051' ' 0.00949']
-        >>> print("parameter sensitivities:      ST_xi = ",astr(sobol_indexes['paras']['sti']['result'],prec=5))
-        parameter sensitivities:      ST_xi =  ['0.05547' '0.83153' '0.00687' '0.00093' '0.00104' '0.00004' '0.05498' '0.26319' '0.44192' '0.00257' '0.02088']
-        >>> print("process option sensitivities: S_Ai  = ",astr(sobol_indexes['process_options']['si']['result'],prec=5))
-        process option sensitivities: S_Ai  =  [' 0.02671' ' 0.42217' ' 0.40059' ' 0.00444' ' 0.00245' '-0.00009' ' 0.04577' ' 0.03133' ' 0.07610' ' 0.00051' ' 0.00949']
-        >>> print("process option sensitivities: ST_Ai = ",astr(sobol_indexes['process_options']['sti']['result'],prec=5))
-        process option sensitivities: ST_Ai =  ['0.05547' '0.85117' '0.83153' '0.00687' '0.00202' '0.00004' '0.06311' '0.26319' '0.44192' '0.00257' '0.02088']
-        >>> print("process sensitivities:        S_A   = ",astr(sobol_indexes['processes']['si']['result'],prec=5))
-        process sensitivities:        S_A   =  ['0.61152' '0.57158' '0.07124']
-        >>> print("process sensitivities:        ST_A  = ",astr(sobol_indexes['processes']['sti']['result'],prec=5))
-        process sensitivities:        ST_A  =  ['0.93249' '0.86664' '0.07131']
+        # >>> # printing
+        # >>> print("parameter sensitivities:      S_xi  = ",astr(sobol_indexes['paras']['si']['result'],prec=5))
+        # parameter sensitivities:      S_xi  =  [' 0.02671' ' 0.40059' ' 0.00444' ' 0.00133' ' 0.00112' '-0.00009' ' 0.04133' ' 0.03133' ' 0.07610' ' 0.00051' ' 0.00949']
+        # >>> print("parameter sensitivities:      ST_xi = ",astr(sobol_indexes['paras']['sti']['result'],prec=5))
+        # parameter sensitivities:      ST_xi =  ['0.05547' '0.83153' '0.00687' '0.00093' '0.00104' '0.00004' '0.05498' '0.26319' '0.44192' '0.00257' '0.02088']
+        # >>> print("process option sensitivities: S_Ai  = ",astr(sobol_indexes['process_options']['si']['result'],prec=5))
+        # process option sensitivities: S_Ai  =  [' 0.02671' ' 0.42217' ' 0.40059' ' 0.00444' ' 0.00245' '-0.00009' ' 0.04577' ' 0.03133' ' 0.07610' ' 0.00051' ' 0.00949']
+        # >>> print("process option sensitivities: ST_Ai = ",astr(sobol_indexes['process_options']['sti']['result'],prec=5))
+        # process option sensitivities: ST_Ai =  ['0.05547' '0.85117' '0.83153' '0.00687' '0.00202' '0.00004' '0.06311' '0.26319' '0.44192' '0.00257' '0.02088']
+        # >>> print("process sensitivities:        S_A   = ",astr(sobol_indexes['processes']['si']['result'],prec=5))
+        # process sensitivities:        S_A   =  ['0.61152' '0.57158' '0.07124']
+        # >>> print("process sensitivities:        ST_A  = ",astr(sobol_indexes['processes']['sti']['result'],prec=5))
+        # process sensitivities:        ST_A  =  ['0.93249' '0.86664' '0.07131']
 
 
-        
+
         License
         -------
         This file is part of the "SA for Models with Multiple Processes" Python package.
 
-        The "SA for Models with Multiple Processes" Python package is free software: you 
-        can redistribute it and/or modify it under the terms of the GNU Lesser General 
-        Public License as published by the Free Software Foundation, either version 3 of 
+        The "SA for Models with Multiple Processes" Python package is free software: you
+        can redistribute it and/or modify it under the terms of the GNU Lesser General
+        Public License as published by the Free Software Foundation, either version 3 of
         the License, or (at your option) any later version.
 
-        The "SA for Models with Multiple Processes" Python package is distributed in the 
-        hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied 
+        The "SA for Models with Multiple Processes" Python package is distributed in the
+        hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied
         warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
         GNU Lesser General Public License for more details.
 
@@ -406,6 +449,7 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
 
     # initialize return variable
     sobol_indexes = OrderedDict()
+    ntime         = OrderedDict()
 
     para_ranges = np.array(para_ranges)
 
@@ -420,7 +464,7 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
 
     if ( nsets is None ):
         nsets = 1000
-        
+
     if not( budget is None ):
         # overwrite nsets if budget is given
         nsets = budget / ((nprocess+2)+(nweights+np.sum(noptions)+2)+(nparas+nweights+2))
@@ -429,9 +473,9 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
             print("Recommended budget: ",((nprocess+2)+(nweights+np.sum(noptions)+2)+(nparas+nweights+2))*1000)
             raise ValueError("sa_model_multiple_processes: Budget is too small!")
 
-    if not(save is None):
-        save_to_pickle = {}
-        
+    if not( (save_pkl is None) and (save_json is None) ):
+        save_to_file = OrderedDict()
+
 
     # (A) Sampling parameters and weights in unit interval using Sobol' sequences
     sobol_sets = sobol.i4_sobol_generate((nparas+nweights)*2,nsets,40000)
@@ -441,7 +485,7 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
     block_a_paras  = copy.deepcopy(sobol_sets[:,0:nparas])
     block_a_paras *= (para_ranges[:,1]-para_ranges[:,0])
     block_a_paras += para_ranges[:,0]
-    
+
     block_b_paras  = copy.deepcopy(sobol_sets[:,nparas+nweights:2*nparas+nweights])
     block_b_paras *= (para_ranges[:,1]-para_ranges[:,0])
     block_b_paras += para_ranges[:,0]
@@ -457,7 +501,7 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
         #      --> nested  = [[0.4,0.6],[0.5,0.1,0.4],[0.3,0.7]]
         nprocess = len(noptions)
         nsets    = np.shape(rnd)[0]
-        
+
         start = 0
         csum  = np.cumsum(noptions-1)
         weights = np.ones([np.shape(rnd)[0],np.shape(rnd)[1]]) * -9999.0
@@ -467,7 +511,7 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
             weights[:,start:csum[iprocess]] = psd.PieShareDistribution(nsets,noptions[iprocess],remainder=False,randomnumbers=rnd[:,start:csum[iprocess]])
             start = csum[iprocess]
 
-        csum_tmp = np.append(np.cumsum(noptions-1),0)    
+        csum_tmp = np.append(np.cumsum(noptions-1),0)
         weights_to_nested = [ [ np.append(np.round(weights[iset,csum_tmp[io-1]:csum_tmp[io]],6),
                                           1.0-np.sum(np.round(weights[iset,csum_tmp[io-1]:csum_tmp[io]],6)))
                               for io,oo in enumerate(noptions) ]
@@ -488,77 +532,84 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
 
     # (D) f_A and f_B
     block_a_weights_nested = random_to_weights_to_nested(block_a_weights,noptions)
-    f_a = np.array([ model_function(block_a_paras[iset], block_a_weights_nested[iset], constants=constants, run_id="a_set_"+str(iset)) for iset in range(nsets) ])
+    # f_a = np.array([ model_function(block_a_paras[iset], block_a_weights_nested[iset], basin_prop, constants=constants, run_id=basin_prop['id']+"_a_set_"+str(iset)) for iset in range(nsets) ])
+    print('block_a_weights = ',block_a_weights)
+    f_a = np.array([ model_function(block_a_paras[iset], block_a_weights_nested[iset], basin_prop, constants=constants, run_id=basin_prop['id']+"_a_set") for iset in range(nsets) ])
     # print('block_a_paras   = ',block_a_paras)
     # print('block_a_weights = ',block_a_weights)
 
     # convert list of dicts into dict of lists:
     #       [{'result_1':1.0, 'result_2:2.0'}, {'result_1':3.0, 'result_2:4.0'}, ...] --> [{'result_1':[1.0,3.0,...],'result_2':[2.0,4.0,...]}]
     keys = f_a[0].keys()
-    tmp = {}
+    tmp = OrderedDict()
     for ikey in keys:
         tmp_key = []
         for iset in range(nsets):
             tmp_key.append( f_a[iset][ikey] )
-            
+
         tmp[ikey] = np.array(tmp_key)
     f_a = tmp
+    # print('keys = ',keys)
     # print('f_a = ',f_a)
-    
+
     # if vector of model outputs f_a has shape (nsets,ntime) --> must be (ntime, nsets)
     for ikey in keys:
         if (len(np.shape(f_a[ikey])) == 2):
             f_a[ikey] = np.transpose(f_a[ikey])
 
     block_b_weights_nested = random_to_weights_to_nested(block_b_weights,noptions)
-    f_b = np.array([ model_function(block_b_paras[iset], block_b_weights_nested[iset], constants=constants, run_id="b_set_"+str(iset)) for iset in range(nsets) ])
+    # f_b = np.array([ model_function(block_b_paras[iset], block_b_weights_nested[iset], basin_prop, constants=constants, run_id=basin_prop['id']+"_b_set_"+str(iset)) for iset in range(nsets) ])
+    f_b = np.array([ model_function(block_b_paras[iset], block_b_weights_nested[iset], basin_prop, constants=constants, run_id=basin_prop['id']+"_b_set") for iset in range(nsets) ])
     # print('block_b_paras   = ',block_b_paras)
     # print('block_b_weights = ',block_b_weights)
 
     # convert list of dicts into dict of lists:
     #       [{'result_1':1.0, 'result_2:2.0'}, {'result_1':3.0, 'result_2:4.0'}, ...] --> [{'result_1':[1.0,3.0,...],'result_2':[2.0,4.0,...]}]
-    keys = f_b[0].keys()
-    tmp = {}
+    # keys = f_b[0].keys()
+    tmp = OrderedDict()
     for ikey in keys:
         tmp_key = []
         for iset in range(nsets):
             tmp_key.append( f_b[iset][ikey] )
-            
+
         tmp[ikey] = np.array(tmp_key)
     f_b = tmp
     # print('f_b = ',f_b)
-    
+
     # if vector of model outputs f_b has shape (nsets,ntime) --> must be (ntime, nsets)
     for ikey in keys:
         if (len(np.shape(f_b[ikey])) == 2):
             f_b[ikey] = np.transpose(f_b[ikey])
 
     # store to save in pickle later
-    if not(save is None):
-        save_to_pickle["block_a_paras"]          = copy.deepcopy(block_a_paras)
-        save_to_pickle["block_b_paras"]          = copy.deepcopy(block_b_paras)
-        save_to_pickle["block_a_weights_nested"] = copy.deepcopy(block_a_weights_nested)
-        save_to_pickle["block_b_weights_nested"] = copy.deepcopy(block_b_weights_nested)
-        save_to_pickle["f_a"]                    = copy.deepcopy(f_a)
-        save_to_pickle["f_b"]                    = copy.deepcopy(f_b)
+    if not( (save_pkl is None) and (save_json is None) ):
+        save_to_file["block_a_paras"]          = copy.deepcopy(block_a_paras)
+        save_to_file["block_b_paras"]          = copy.deepcopy(block_b_paras)
+        save_to_file["block_a_weights_nested"] = copy.deepcopy(block_a_weights_nested)
+        save_to_file["block_b_weights_nested"] = copy.deepcopy(block_b_weights_nested)
+        save_to_file["f_a"]                    = copy.deepcopy(f_a)
+        save_to_file["f_b"]                    = copy.deepcopy(f_b)
 
-    ntime = {}
     for ikey in keys:
         if (len(np.shape(f_b[ikey])) == 2):
             ntime[ikey] = np.shape(f_b[ikey])[0]
         else:
             ntime[ikey] = 0
-        
+    print('ntime = ',ntime)
+    # store to save in pickle later
+    if not( (save_pkl is None) and (save_json is None) ):
+        save_to_file["ntime"] = ntime
+
     # (1) parameter sensitivities:
     #     main effects:  [S_x1,  S_x2,  ..., S_w1,  S_w2,  ...]
     #     total effects: [ST_x1, ST_x2, ..., ST_w1, ST_w2, ...]
     col_changes_Ci = [ [ii] for ii in range(nparas+nweights) ]  # list of columns to change at ones for Ci
-    f_c = {}
+    f_c = OrderedDict()
     for ikey in keys:
         if (ntime[ikey] == 0):
             f_c[ikey] = np.ones([len(col_changes_Ci),nsets]) * -9999.
         else:
-            print('nsets = ',nsets)
+            # print('nsets = ',nsets)
             tttmp = np.ones([ntime[ikey],len(col_changes_Ci),nsets]) * -9999.
             f_c[ikey] = tttmp
 
@@ -576,20 +627,26 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
                 block_c_weights[iicol][:,ipara-nparas] = copy.deepcopy(block_b_weights[:,ipara-nparas])
         # (1b) run model for all Ci/j blocks
         block_c_weights_nested[iicol] = random_to_weights_to_nested(block_c_weights[iicol],noptions)
+        # f_c_tmp = np.array([ model_function(block_c_paras[iicol][iset],
+        #                                         block_c_weights_nested[iicol][iset],
+        #                                         basin_prop,
+        #                                         constants=constants,
+        #                                         run_id=basin_prop['id']+"_c_para_"+str(iicol)+"_set_"+str(iset)) for iset in range(nsets) ])
         f_c_tmp = np.array([ model_function(block_c_paras[iicol][iset],
                                                 block_c_weights_nested[iicol][iset],
+                                                basin_prop,
                                                 constants=constants,
-                                                run_id="c_para_"+str(iicol)+"_set_"+str(iset)) for iset in range(nsets) ])
+                                                run_id=basin_prop['id']+"_c_set") for iset in range(nsets) ])
 
         # convert list of dicts into dict of lists:
         #       [{'result_1':1.0, 'result_2:2.0'}, {'result_1':3.0, 'result_2:4.0'}, ...] --> [{'result_1':[1.0,3.0,...],'result_2':[2.0,4.0,...]}]
-        keys = f_c_tmp[0].keys()
-        tmp = {}
+        # keys = f_c_tmp[0].keys()
+        tmp = OrderedDict()
         for ikey in keys:
             tmp_key = []
             for iset in range(nsets):
                 tmp_key.append( f_c_tmp[iset][ikey] )
-            
+
             tmp[ikey] = np.array(tmp_key)
         f_c_tmp = tmp
         # print('f_c_tmp = ',f_c_tmp)
@@ -604,18 +661,18 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
     # print("f_c = ",f_c)
 
     # store to save in pickle later
-    if not(save is None):
-        save_to_pickle["block_c_paras"]                = copy.deepcopy(block_c_paras)
-        save_to_pickle["block_c_weights_nested_paras"] = copy.deepcopy(block_c_weights_nested)
-        save_to_pickle["f_c_paras"]                    = copy.deepcopy(f_c)
-        
+    if not( (save_pkl is None) and (save_json is None) ):
+        save_to_file["block_c_paras"]                = copy.deepcopy(block_c_paras)
+        save_to_file["block_c_weights_nested_paras"] = copy.deepcopy(block_c_weights_nested)
+        save_to_file["f_c_paras"]                    = copy.deepcopy(f_c)
+
     # (1c) calculate Sobol' indexes
-    si   = {}
-    sti  = {}
-    msi  = {}
-    msti = {}
-    wsi  = {}
-    wsti = {}
+    si   = OrderedDict()
+    sti  = OrderedDict()
+    msi  = OrderedDict()
+    msti = OrderedDict()
+    wsi  = OrderedDict()
+    wsti = OrderedDict()
     for ikey in keys:
         if (ntime[ikey] == 0):
             si[ikey], sti[ikey] = sobol_index.sobol_index(ya=f_a[ikey],
@@ -624,6 +681,10 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
                                                           si=True,
                                                           sti=True,
                                                           method='Mai1999')
+            msi[ikey]  = None
+            msti[ikey] = None
+            wsi[ikey]  = None
+            wsti[ikey] = None
         else:
             si[ikey], sti[ikey], msi[ikey], msti[ikey], wsi[ikey], wsti[ikey] = sobol_index.sobol_index(ya=f_a[ikey],
                                                                                                         yb=f_b[ikey],
@@ -634,50 +695,43 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
                                                                                                         wmean=True,
                                                                                                         method='Mai1999')
 
-    for ikey in keys:
-        if (ntime[ikey] == 0):
-            tmp = {}
-            tmp['si']  = si
-            tmp['sti'] = sti
-            sobol_indexes['paras'] = tmp
+    tmp = OrderedDict()
+    tmp['si']   = si
+    tmp['sti']  = sti
+    tmp['msi']  = msi
+    tmp['msti'] = msti
+    tmp['wsi']  = wsi
+    tmp['wsti'] = wsti
+    sobol_indexes['paras'] = tmp
 
-            # print("si['"+ikey+"']   = ", si[ikey])
-            # print("sti['"+ikey+"']  = ", sti[ikey])
-        else:
-            tmp = {}
-            tmp['si']   = si
-            tmp['sti']  = sti
-            tmp['msi']  = msi
-            tmp['msti'] = msti
-            tmp['wsi']  = wsi
-            tmp['wsti'] = wsti
-            sobol_indexes['paras'] = tmp
-            
-            print("si['"+ikey+"']   = ", si[ikey])
-            print("sti['"+ikey+"']  = ", sti[ikey])
-            print("msi['"+ikey+"']  = ", msi[ikey])
-            print("msti['"+ikey+"'] = ", msti[ikey])
-            print("wsi['"+ikey+"']  = ", wsi[ikey])
-            print("wsti['"+ikey+"'] = ", wsti[ikey])
+    # print("si['"+ikey+"']   = ", si[ikey])
+    # print("sti['"+ikey+"']  = ", sti[ikey])
+    # print("msi['"+ikey+"']  = ", msi[ikey])
+    # print("msti['"+ikey+"'] = ", msti[ikey])
+    # print("wsi['"+ikey+"']  = ", wsi[ikey])
+    # print("wsti['"+ikey+"'] = ", wsti[ikey])
 
-            #print("shape si['"+ikey+"']   = ",np.shape(si[ikey]))
-            #print("shape sti['"+ikey+"']  = ",np.shape(sti[ikey]))
-            #print("shape msi['"+ikey+"']  = ",np.shape(msi[ikey]))
-            #print("shape msti['"+ikey+"'] = ",np.shape(msti[ikey]))
-            #print("shape wsi['"+ikey+"']  = ",np.shape(wsi[ikey]))
-            #print("shape wsti['"+ikey+"'] = ",np.shape(wsti[ikey]))
+    #print("shape si['"+ikey+"']   = ",np.shape(si[ikey]))
+    #print("shape sti['"+ikey+"']  = ",np.shape(sti[ikey]))
+    #print("shape msi['"+ikey+"']  = ",np.shape(msi[ikey]))
+    #print("shape msti['"+ikey+"'] = ",np.shape(msti[ikey]))
+    #print("shape wsi['"+ikey+"']  = ",np.shape(wsi[ikey]))
+    #print("shape wsti['"+ikey+"'] = ",np.shape(wsti[ikey]))
+
+
+
 
     # (2) process option sensitivities:
     #     main effects:  [S_A1,  S_A2,  ..., S_w1,  S_w2,  ...]
     #     total effects: [ST_A1, ST_A2, ..., ST_w1, ST_w2, ...]
     col_changes_Ci = [ ii for ioption in paras_per_option for ii in ioption ] + [ [ii] for ii in range(nparas,nparas+nweights) ]  # list of columns to change at ones for Ci
-    f_c = {}
+    f_c = OrderedDict()
     for ikey in keys:
         if (ntime[ikey] == 0):
             f_c[ikey] = np.ones([len(col_changes_Ci),nsets]) * -9999.
         else:
             f_c[ikey] = np.ones([ntime[ikey],len(col_changes_Ci),nsets]) * -9999.
-        
+
     block_c_paras          = [ [] for icol in col_changes_Ci ]
     block_c_weights        = [ [] for icol in col_changes_Ci ]
     block_c_weights_nested = [ [] for icol in col_changes_Ci ]
@@ -692,20 +746,26 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
                 block_c_weights[iicol][:,ipara-nparas] = copy.deepcopy(block_b_weights[:,ipara-nparas])
         # (2b) run model for all Ci/j blocks
         block_c_weights_nested[iicol] = random_to_weights_to_nested(block_c_weights[iicol],noptions)
+        # f_c_tmp = np.array([ model_function(block_c_paras[iicol][iset],
+        #                                         block_c_weights_nested[iicol][iset],
+        #                                         basin_prop,
+        #                                         constants=constants,
+        #                                         run_id=basin_prop['id']+"_c_para_"+str(iicol)+"_set_"+str(iset)) for iset in range(nsets) ])
         f_c_tmp = np.array([ model_function(block_c_paras[iicol][iset],
                                                 block_c_weights_nested[iicol][iset],
+                                                basin_prop,
                                                 constants=constants,
-                                                run_id="c_para_"+str(iicol)+"_set_"+str(iset)) for iset in range(nsets) ])
+                                                run_id=basin_prop['id']+"_c_set") for iset in range(nsets) ])
 
         # convert list of dicts into dict of lists:
         #       [{'result_1':1.0, 'result_2:2.0'}, {'result_1':3.0, 'result_2:4.0'}, ...] --> [{'result_1':[1.0,3.0,...],'result_2':[2.0,4.0,...]}]
-        keys = f_c_tmp[0].keys()
-        tmp = {}
+        # keys = f_c_tmp[0].keys()
+        tmp = OrderedDict()
         for ikey in keys:
             tmp_key = []
             for iset in range(nsets):
                 tmp_key.append( f_c_tmp[iset][ikey] )
-            
+
             tmp[ikey] = np.array(tmp_key)
         f_c_tmp = tmp
         # print('f_c_tmp = ',f_c_tmp)
@@ -720,18 +780,18 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
     # print("f_c = ",f_c)
 
     # store to save in pickle later
-    if not(save is None):
-        save_to_pickle["block_c_process_options"]                = copy.deepcopy(block_c_paras)
-        save_to_pickle["block_c_weights_nested_process_options"] = copy.deepcopy(block_c_weights_nested)
-        save_to_pickle["f_c_process_options"]                    = copy.deepcopy(f_c)
-        
+    if not( (save_pkl is None) and (save_json is None) ):
+        save_to_file["block_c_process_options"]                = copy.deepcopy(block_c_paras)
+        save_to_file["block_c_weights_nested_process_options"] = copy.deepcopy(block_c_weights_nested)
+        save_to_file["f_c_process_options"]                    = copy.deepcopy(f_c)
+
     # (2c) calculate Sobol' indexes
-    si   = {}
-    sti  = {}
-    msi  = {}
-    msti = {}
-    wsi  = {}
-    wsti = {}
+    si   = OrderedDict()
+    sti  = OrderedDict()
+    msi  = OrderedDict()
+    msti = OrderedDict()
+    wsi  = OrderedDict()
+    wsti = OrderedDict()
     for ikey in keys:
         if (ntime[ikey] == 0):
             si[ikey], sti[ikey] = sobol_index.sobol_index(ya=f_a[ikey],
@@ -740,6 +800,10 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
                                                           si=True,
                                                           sti=True,
                                                           method='Mai1999')
+            msi[ikey]  = None
+            msti[ikey] = None
+            wsi[ikey]  = None
+            wsti[ikey] = None
         else:
             si[ikey], sti[ikey], msi[ikey], msti[ikey], wsi[ikey], wsti[ikey] = sobol_index.sobol_index(ya=f_a[ikey],
                                                                                                         yb=f_b[ikey],
@@ -749,53 +813,45 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
                                                                                                         mean=True,
                                                                                                         wmean=True,
                                                                                                         method='Mai1999')
-    for ikey in keys:
-        if (ntime[ikey] == 0):
-            tmp = {}
-            tmp['si']  = si
-            tmp['sti'] = sti
-            sobol_indexes['process_options'] = tmp
+    tmp = OrderedDict()
+    tmp['si']   = si
+    tmp['sti']  = sti
+    tmp['msi']  = msi
+    tmp['msti'] = msti
+    tmp['wsi']  = wsi
+    tmp['wsti'] = wsti
+    sobol_indexes['process_options'] = tmp
 
-            # print("si['"+ikey+"']   = ", si[ikey])
-            # print("sti['"+ikey+"']  = ", sti[ikey])
-        else:
-            tmp = {}
-            tmp['si']   = si
-            tmp['sti']  = sti
-            tmp['msi']  = msi
-            tmp['msti'] = msti
-            tmp['wsi']  = wsi
-            tmp['wsti'] = wsti
-            sobol_indexes['process_options'] = tmp
-            
-            print("si['"+ikey+"']   = ", si[ikey])
-            print("sti['"+ikey+"']  = ", sti[ikey])
-            print("msi['"+ikey+"']  = ", msi[ikey])
-            print("msti['"+ikey+"'] = ", msti[ikey])
-            print("wsi['"+ikey+"']  = ", wsi[ikey])
-            print("wsti['"+ikey+"'] = ", wsti[ikey])
+    # print("si['"+ikey+"']   = ", si[ikey])
+    # print("sti['"+ikey+"']  = ", sti[ikey])
+    # print("msi['"+ikey+"']  = ", msi[ikey])
+    # print("msti['"+ikey+"'] = ", msti[ikey])
+    # print("wsi['"+ikey+"']  = ", wsi[ikey])
+    # print("wsti['"+ikey+"'] = ", wsti[ikey])
 
-            #print("shape si['"+ikey+"']   = ",np.shape(si[ikey]))
-            #print("shape sti['"+ikey+"']  = ",np.shape(sti[ikey]))
-            #print("shape msi['"+ikey+"']  = ",np.shape(msi[ikey]))
-            #print("shape msti['"+ikey+"'] = ",np.shape(msti[ikey]))
-            #print("shape wsi['"+ikey+"']  = ",np.shape(wsi[ikey]))
-            #print("shape wsti['"+ikey+"'] = ",np.shape(wsti[ikey]))
+    #print("shape si['"+ikey+"']   = ",np.shape(si[ikey]))
+    #print("shape sti['"+ikey+"']  = ",np.shape(sti[ikey]))
+    #print("shape msi['"+ikey+"']  = ",np.shape(msi[ikey]))
+    #print("shape msti['"+ikey+"'] = ",np.shape(msti[ikey]))
+    #print("shape wsi['"+ikey+"']  = ",np.shape(wsi[ikey]))
+    #print("shape wsti['"+ikey+"'] = ",np.shape(wsti[ikey]))
+
+
 
     # (3) process sensitivities:
     #     main effects:  [S_A,   S_B,   ...]
     #     total effects: [ST_A,  ST_B,  ...]
-    csum_tmp = np.append(np.cumsum(noptions-1),0) 
+    csum_tmp = np.append(np.cumsum(noptions-1),0)
     col_changes_Ci = [ [ ipara for ilist in ioption for ipara in ilist ] +  # list of parameters in this process
-                       range(nparas,nparas+nweights)[csum_tmp[iioption-1]:csum_tmp[iioption]] for iioption,ioption in enumerate(paras_per_option) # list of weights for this process
+                       list(range(nparas,nparas+nweights)[csum_tmp[iioption-1]:csum_tmp[iioption]]) for iioption,ioption in enumerate(paras_per_option) # list of weights for this process
                      ]  # list of columns to change at ones for Ci
-    f_c = {}
+    f_c = OrderedDict()
     for ikey in keys:
         if (ntime[ikey] == 0):
             f_c[ikey] = np.ones([len(col_changes_Ci),nsets]) * -9999.
         else:
             f_c[ikey] = np.ones([ntime[ikey],len(col_changes_Ci),nsets]) * -9999.
-        
+
     block_c_paras          = [ [] for icol in col_changes_Ci ]
     block_c_weights        = [ [] for icol in col_changes_Ci ]
     block_c_weights_nested = [ [] for icol in col_changes_Ci ]
@@ -810,20 +866,26 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
                 block_c_weights[iicol][:,ipara-nparas] = copy.deepcopy(block_b_weights[:,ipara-nparas])
         # (3b) run model for all Ci blocks
         block_c_weights_nested[iicol] = random_to_weights_to_nested(block_c_weights[iicol],noptions)
+        # f_c_tmp = np.array([ model_function(block_c_paras[iicol][iset],
+        #                                         block_c_weights_nested[iicol][iset],
+        #                                         basin_prop,
+        #                                         constants=constants,
+        #                                         run_id=basin_prop['id']+"_c_para_"+str(iicol)+"_set_"+str(iset)) for iset in range(nsets) ])
         f_c_tmp = np.array([ model_function(block_c_paras[iicol][iset],
                                                 block_c_weights_nested[iicol][iset],
+                                                basin_prop,
                                                 constants=constants,
-                                                run_id="c_para_"+str(iicol)+"_set_"+str(iset)) for iset in range(nsets) ])
+                                                run_id=basin_prop['id']+"_c_set") for iset in range(nsets) ])
 
         # convert list of dicts into dict of lists:
         #       [{'result_1':1.0, 'result_2:2.0'}, {'result_1':3.0, 'result_2:4.0'}, ...] --> [{'result_1':[1.0,3.0,...],'result_2':[2.0,4.0,...]}]
-        keys = f_c_tmp[0].keys()
-        tmp = {}
+        # keys = f_c_tmp[0].keys()
+        tmp = OrderedDict()
         for ikey in keys:
             tmp_key = []
             for iset in range(nsets):
                 tmp_key.append( f_c_tmp[iset][ikey] )
-            
+
             tmp[ikey] = np.array(tmp_key)
         f_c_tmp = tmp
         # print('f_c_tmp = ',f_c_tmp)
@@ -838,18 +900,18 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
     # print("f_c = ",f_c)
 
     # store to save in pickle later
-    if not(save is None):
-        save_to_pickle["block_c_processes"]                = copy.deepcopy(block_c_paras)
-        save_to_pickle["block_c_weights_nested_processes"] = copy.deepcopy(block_c_weights_nested)
-        save_to_pickle["f_c_processes"]                    = copy.deepcopy(f_c)
+    if not( (save_pkl is None) and (save_json is None) ):
+        save_to_file["block_c_processes"]                = copy.deepcopy(block_c_paras)
+        save_to_file["block_c_weights_nested_processes"] = copy.deepcopy(block_c_weights_nested)
+        save_to_file["f_c_processes"]                    = copy.deepcopy(f_c)
 
     # (3c) calculate Sobol' indexes
-    si   = {}
-    sti  = {}
-    msi  = {}
-    msti = {}
-    wsi  = {}
-    wsti = {}
+    si   = OrderedDict()
+    sti  = OrderedDict()
+    msi  = OrderedDict()
+    msti = OrderedDict()
+    wsi  = OrderedDict()
+    wsti = OrderedDict()
     for ikey in keys:
         if (ntime[ikey] == 0):
             si[ikey], sti[ikey] = sobol_index.sobol_index(ya=f_a[ikey],
@@ -858,6 +920,10 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
                                                           si=True,
                                                           sti=True,
                                                           method='Mai1999')
+            msi[ikey]  = None
+            msti[ikey] = None
+            wsi[ikey]  = None
+            wsti[ikey] = None
         else:
             si[ikey], sti[ikey], msi[ikey], msti[ikey], wsi[ikey], wsti[ikey] = sobol_index.sobol_index(ya=f_a[ikey],
                                                                                                         yb=f_b[ikey],
@@ -867,50 +933,77 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
                                                                                                         mean=True,
                                                                                                         wmean=True,
                                                                                                         method='Mai1999')
-    for ikey in keys:
-        if (ntime[ikey] == 0):
-            tmp = {}
-            tmp['si']  = si
-            tmp['sti'] = sti
-            sobol_indexes['processes'] = tmp
+    tmp = OrderedDict()
+    tmp['si']   = si
+    tmp['sti']  = sti
+    tmp['msi']  = msi
+    tmp['msti'] = msti
+    tmp['wsi']  = wsi
+    tmp['wsti'] = wsti
+    sobol_indexes['processes'] = tmp
 
-            # print("si['"+ikey+"']   = ", si[ikey])
-            # print("sti['"+ikey+"']  = ", sti[ikey])
-        else:
-            tmp = {}
-            tmp['si']   = si
-            tmp['sti']  = sti
-            tmp['msi']  = msi
-            tmp['msti'] = msti
-            tmp['wsi']  = wsi
-            tmp['wsti'] = wsti
-            sobol_indexes['processes'] = tmp
-            
-            print("si['"+ikey+"']   = ", si[ikey])
-            print("sti['"+ikey+"']  = ", sti[ikey])
-            print("msi['"+ikey+"']  = ", msi[ikey])
-            print("msti['"+ikey+"'] = ", msti[ikey])
-            print("wsi['"+ikey+"']  = ", wsi[ikey])
-            print("wsti['"+ikey+"'] = ", wsti[ikey])
+    # print("si['"+ikey+"']   = ", si[ikey])
+    # print("sti['"+ikey+"']  = ", sti[ikey])
+    # print("msi['"+ikey+"']  = ", msi[ikey])
+    # print("msti['"+ikey+"'] = ", msti[ikey])
+    # print("wsi['"+ikey+"']  = ", wsi[ikey])
+    # print("wsti['"+ikey+"'] = ", wsti[ikey])
 
-            #print("shape si['"+ikey+"']   = ",np.shape(si[ikey]))
-            #print("shape sti['"+ikey+"']  = ",np.shape(sti[ikey]))
-            #print("shape msi['"+ikey+"']  = ",np.shape(msi[ikey]))
-            #print("shape msti['"+ikey+"'] = ",np.shape(msti[ikey]))
-            #print("shape wsi['"+ikey+"']  = ",np.shape(wsi[ikey]))
-            #print("shape wsti['"+ikey+"'] = ",np.shape(wsti[ikey]))
+    #print("shape si['"+ikey+"']   = ",np.shape(si[ikey]))
+    #print("shape sti['"+ikey+"']  = ",np.shape(sti[ikey]))
+    #print("shape msi['"+ikey+"']  = ",np.shape(msi[ikey]))
+    #print("shape msti['"+ikey+"'] = ",np.shape(msti[ikey]))
+    #print("shape wsi['"+ikey+"']  = ",np.shape(wsi[ikey]))
+    #print("shape wsti['"+ikey+"'] = ",np.shape(wsti[ikey]))
+
+
 
     # store to save in pickle later
-    if not(save is None):
-        save_to_pickle["sobol_indexes"] = sobol_indexes
-        
-    # save to pickle
-    if not(save is None):
-        pickle.dump( save_to_pickle, open( save, "wb" ) )
+    if not( (save_pkl is None) and (save_json is None) ):
+        save_to_file["sobol_indexes"] = sobol_indexes
 
-    # # read with:
+    # save to pickle
+    if not(save_pkl is None):
+        pickle.dump( save_to_file, open( save_pkl, "wb" ) )
+
+    # enable serialization of numpy arrays to be stored in JSON
+    # found on: https://stackoverflow.com/questions/26646362/numpy-array-is-not-json-serializable
+    class NumpyEncoder(json.JSONEncoder):
+        """ Special json encoder for numpy types """
+        def default(self, obj):
+            if isinstance(obj, (np.int_, np.intc, np.intp, np.int8,
+                np.int16, np.int32, np.int64, np.uint8,
+                np.uint16, np.uint32, np.uint64)):
+                return int(obj)
+            elif isinstance(obj, (np.float_, np.float16, np.float32, 
+                np.float64)):
+                return float(obj)
+            elif isinstance(obj,(np.ndarray,)): #### This is the fix
+                return obj.tolist()
+            return json.JSONEncoder.default(self, obj)
+
+    # save to json
+    if not(save_json is None):
+        # save everything
+        json_file_handle = open(save_json, 'w')
+        try:
+            json.dump( json.dumps(save_to_file, cls=NumpyEncoder), json_file_handle )
+        finally:
+            json_file_handle.close()
+
+
+        # save only Sobol' indexes
+        save_json_si = '/'.join(save_json.split('/')[:-1])+'/sensitivity_'+'_'.join(save_json.split('/')[-1].split('_')[1:])
+        json_file_handle = open(save_json_si, 'w')
+        try:
+            json.dump( json.dumps(save_to_file['sobol_indexes'], cls=NumpyEncoder), json_file_handle )
+        finally:
+            json_file_handle.close()
+
+
+    # # read PICKLE with:
     # import pickle
-    # setup = pickle.load( open( <save>, "rb" ) )
+    # setup = pickle.load( open( <save_pkl>, "rb" ) )
     # setup.keys()
 
     # iset=3, ipara=18
@@ -919,245 +1012,16 @@ def sa_model_multiple_processes(paras_per_option, para_ranges, model_function, c
     #     setup["f_c_paras"][:,18,3]  --> model_function_raven(setup["block_c_paras"][18][3], setup["block_c_weights_nested_paras"][18][3])
 
     # failed runs:
-    #     
+    #
 
-        
+
     # Done.
     return sobol_indexes
 
 
 if __name__ == '__main__':
-    
+
     import doctest
     doctest.testmod(optionflags=doctest.NORMALIZE_WHITESPACE)
 
-    # import numpy as np
-    
-    # nsets = 1000
-
-    # # list of parameters that go into each option (numbering starts with 0)
-    # # (a) simple setup
-    # paras_per_option = [ 
-    #     [[0], []],             # parameters of process options A1 and A2
-    #     [[1], [2], [3,4]],     # parameters of process options B1, B2, and B3
-    #     [[5], [6]]             # parameters of process options A1 and A2
-    # ]
-
-    # para_ranges = [ 
-    #     [-np.pi,np.pi],      # parameter range of x1
-    #     [-np.pi,np.pi],      # parameter range of x2
-    #     [-np.pi,np.pi],      # parameter range of x3
-    #     [-np.pi,np.pi],      # parameter range of x4
-    #     [-np.pi,np.pi],      # parameter range of x5
-    #     [-np.pi,np.pi],      # parameter range of x6
-    #     [-np.pi,np.pi]       # parameter range of x7
-    # ]
-
-    # def model_function(paras, weights, constants=None, run_id=None):
-    #     # input:
-    #     #     paras     ... list of model parameters scaled to their range;
-    #     #                   values for all N model parameters have to be provided
-    #     #                   example:
-    #     #                        [ x1, x2, x3, x4, .... ]
-    #     #     weights   ... list of lists of weights to weight options of each process;
-    #     #                   each list of the lists need to sum up to 1.0;
-    #     #                   each sublist is the N_i weights for the N_i process options of process i;
-    #     #                   example:
-    #     #                        [ [w_a1, w_a2, ...], [w_b1, w_b2, w_b3, ...], [w_c1, w_c2, ...], ... ]
-    #     #     constants ... optional list of constants that are same for all models;
-    #     #                   like parameters a and b in Ishigami-Homma function
-    #     #                   example:
-    #     #                        [2.0, 1.0]
-    #     # output:
-    #     #     model output
-    #     #     example:
-    #     #           { 'Q':        np.array([2.5,3.5,...,4.5]),
-    #     #             'NSE':      0.6,
-    #     #             'baseflow': np.array([20.5,23.5,...,24.5])
-    #     #           }
-
-    #     # check that provided number of weights is correct:
-    #     # --> one weight per option per process
-    #     if ( [len(ilist) for ilist in weights] != [2,3,2] ):
-    #         print("Number of weights: ",[len(ilist) for ilist in weights])
-    #         raise ValueError("sa_model_multiple_processes: model_function: provided number of weights must be [2,3,2]")
-    #     # check if sum up to 1.0:
-    #     if ( np.any(np.array([np.sum(ilist) for ilist in weights]) != 1.0) ):
-    #         print("Sum of weights per process: ",[np.sum(ilist) for ilist in weights])
-    #         raise ValueError("sa_model_multiple_processes: model_function: sum of weights must be 1.0 for all processes")
-    #     # check if weights <= 1.0:
-    #     if ( np.any(np.array([item for ilist in weights for item in ilist]) > 1.0) ):
-    #         print("Weights: ",weights)
-    #         raise ValueError("sa_model_multiple_processes: model_function: weights must be all less or equal 1.0")
-    #     # check if weights >= 0.0:
-    #     if ( np.any(np.array([item for ilist in weights for item in ilist]) < 0.0) ):
-    #         print("Weights: ",weights)
-    #         raise ValueError("sa_model_multiple_processes: model_function: weights must be all greater or equal 0.0")
-    #     # check if number of parameters is correct:
-    #     if (len(paras) != 7):
-    #         print("Number of parameters: ",len(paras))
-    #         raise ValueError("sa_model_multiple_processes: model_function: provided number of parameters must be 7")
-      
-    #     out = 0.0
-
-    #     if constants is None:
-    #         aa = 2.0
-    #         bb = 1.0
-    #     else:
-    #         aa = constants[0]
-    #         bb = constants[1]
-
-    #     # ---------------
-    #     # simple model
-    #     # ---------------
-      
-    #     # process A
-    #     out += ( weights[0][0] * np.sin(paras[0]) +              # A1
-    #              weights[0][1] * 1.0 )                           # A2
-    #     # process B
-    #     out *= ( weights[1][0] * (1.0 + bb * paras[1]**4) +      # B1
-    #              weights[1][1] * (1.0 + bb * paras[2]**2) +      # B2
-    #              weights[1][2] * (paras[3] + bb * paras[4]) )    # B3
-    #     # process C
-    #     out += ( weights[2][0] * (aa * np.sin(paras[5])**2) +    # C1
-    #              weights[2][1] * (1.0 + bb * paras[6]**4) )      # C2
-
-    #     model = {}
-    #     model['result'] = out
-
-    #     return model
-
-    # # this is calling the actual tool
-    # sobol_indexes = sa_model_multiple_processes(paras_per_option, para_ranges, model_function, constants=None, nsets=nsets)
-
-    # # printing
-    # print("---------------------------------------")
-    # print("SIMPLE SETUP")
-    # print("---------------------------------------")
-    # print("parameter sensitivities: ")
-    # print("    S_xi  = ",astr(sobol_indexes['paras']['si']['result'],prec=5))
-    # print("    ST_xi = ",astr(sobol_indexes['paras']['sti']['result'],prec=5))
-    # print("")
-    # print("process option sensitivities: ")
-    # print("    S_Ai  = ",astr(sobol_indexes['process_options']['si']['result'],prec=5))
-    # print("    ST_Ai = ",astr(sobol_indexes['process_options']['sti']['result'],prec=5))
-    # print("")
-    # print("process sensitivities: ")
-    # print("    S_A   = ",astr(sobol_indexes['processes']['si']['result'],prec=5))
-    # print("    ST_A  = ",astr(sobol_indexes['processes']['sti']['result'],prec=5))
-    # print("")
-
-
-    # # list of parameters that go into each option (numbering starts with 0)
-    # # (b) realistic setup
-    # paras_per_option = [ 
-    #     [[0], [0,1]],          # parameters of process options A1 and A2
-    #     [[1], [2], [3,4]],     # parameters of process options B1, B2, and B3
-    #     [[5], [2,6]]           # parameters of process options A1 and A2
-    # ]
-
-    # para_ranges = [ 
-    #     [-np.pi,np.pi],      # parameter range of x1
-    #     [-np.pi,np.pi],      # parameter range of x2
-    #     [-np.pi,np.pi],      # parameter range of x3
-    #     [-np.pi,np.pi],      # parameter range of x4
-    #     [-np.pi,np.pi],      # parameter range of x5
-    #     [-np.pi,np.pi],      # parameter range of x6
-    #     [-np.pi,np.pi]       # parameter range of x7
-    # ]
-
-    # def model_function(paras, weights, constants=None, run_id=None):
-    #     # input:
-    #     #     paras     ... list of model parameters scaled to their range;
-    #     #                   values for all N model parameters have to be provided
-    #     #                   example:
-    #     #                        [ x1, x2, x3, x4, .... ]
-    #     #     weights   ... list of lists of weights to weight options of each process;
-    #     #                   each list of the lists need to sum up to 1.0;
-    #     #                   each sublist is the N_i weights for the N_i process options of process i;
-    #     #                   example:
-    #     #                        [ [w_a1, w_a2, ...], [w_b1, w_b2, w_b3, ...], [w_c1, w_c2, ...], ... ]
-    #     #     constants ... optional list of constants that are same for all models;
-    #     #                   like parameters a and b in Ishigami-Homma function
-    #     #                   example:
-    #     #                        [2.0, 1.0]
-    #     # output:
-    #     #     model output
-    #     #     example:
-    #     #           { 'Q':        np.array([2.5,3.5,...,4.5]),
-    #     #             'NSE':      0.6,
-    #     #             'baseflow': np.array([20.5,23.5,...,24.5])
-    #     #           }
-
-    #     # check that provided number of weights is correct:
-    #     # --> one weight per option per process
-    #     if ( [len(ilist) for ilist in weights] != [2,3,2] ):
-    #         print("Number of weights: ",[len(ilist) for ilist in weights])
-    #         raise ValueError("sa_model_multiple_processes: model_function: provided number of weights must be [2,3,2]")
-    #     # check if sum up to 1.0:
-    #     if ( np.any(np.array([np.sum(ilist) for ilist in weights]) != 1.0) ):
-    #         print("Sum of weights per process: ",[np.sum(ilist) for ilist in weights])
-    #         raise ValueError("sa_model_multiple_processes: model_function: sum of weights must be 1.0 for all processes")
-    #     # check if weights <= 1.0:
-    #     if ( np.any(np.array([item for ilist in weights for item in ilist]) > 1.0) ):
-    #         print("Weights: ",weights)
-    #         raise ValueError("sa_model_multiple_processes: model_function: weights must be all less or equal 1.0")
-    #     # check if weights >= 0.0:
-    #     if ( np.any(np.array([item for ilist in weights for item in ilist]) < 0.0) ):
-    #         print("Weights: ",weights)
-    #         raise ValueError("sa_model_multiple_processes: model_function: weights must be all greater or equal 0.0")
-    #     # check if number of parameters is correct:
-    #     if (len(paras) != 7):
-    #         print("Number of parameters: ",len(paras))
-    #         raise ValueError("sa_model_multiple_processes: model_function: provided number of parameters must be 7")
-      
-    #     out = 0.0
-
-    #     if constants is None:
-    #         aa = 2.0
-    #         bb = 1.0
-    #     else:
-    #         aa = constants[0]
-    #         bb = constants[1]
-
-
-    #     # ---------------
-    #     # realistic model
-    #     # ---------------
-      
-    #     # process D
-    #     out += ( weights[0][0] * np.sin(paras[0]) +                            # D1
-    #              weights[0][1] * (paras[0]+paras[1]**2) )                      # D2
-    #     # process E
-    #     out *= ( weights[1][0] * (1.0 + bb * paras[1]**4) +                    # E1
-    #              weights[1][1] * (1.0 + bb * paras[2]**2) +                    # E2
-    #              weights[1][2] * (paras[3] + bb * paras[4]) )                  # E3
-    #     # process F
-    #     out += ( weights[2][0] * (aa * np.sin(paras[5])**2) +                  # F1          
-    #              weights[2][1] * (1.0 + bb * paras[6]**4) + paras[2]**2 )      # F2
-
-    #     model = {}
-    #     model['result'] = out
-
-    #     return model
-
-    # # this is calling the actual tool
-    # sobol_indexes = sa_model_multiple_processes(paras_per_option, para_ranges, model_function, constants=None, nsets=nsets)
-
-    # # printing
-    # print("---------------------------------------")
-    # print("REALISTIC SETUP")
-    # print("---------------------------------------")
-    # print("parameter sensitivities: ")
-    # print("    S_xi  = ",astr(sobol_indexes['paras']['si']['result'],prec=5))
-    # print("    ST_xi = ",astr(sobol_indexes['paras']['sti']['result'],prec=5))
-    # print("")
-    # print("process option sensitivities: ")
-    # print("    S_Ai  = ",astr(sobol_indexes['process_options']['si']['result'],prec=5))
-    # print("    ST_Ai = ",astr(sobol_indexes['process_options']['sti']['result'],prec=5))
-    # print("")
-    # print("process sensitivities: ")
-    # print("    S_A   = ",astr(sobol_indexes['processes']['si']['result'],prec=5))
-    # print("    ST_A  = ",astr(sobol_indexes['processes']['sti']['result'],prec=5))
-    # print("")
 
