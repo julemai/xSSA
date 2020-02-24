@@ -51,6 +51,7 @@ if __name__ == '__main__':
     import numpy as np
     import pickle
     import copy
+    import collections
     
     import sobol                                      # in lib/  
     from   sobol_index     import sobol_index         # in lib/    
@@ -127,25 +128,39 @@ if __name__ == '__main__':
     # -------------------------------------------------------------------------
     # Set processes and options
     # -------------------------------------------------------------------------
-
-    # list of parameters that go into each option (numbering starts with 0)        
-    options_paras_realistic = [ 
-        [[0], [0,1]],          # parameters of process options D1 and D2
-        [[1], [2], [3,4]],     # parameters of process options E1, E2, and E3
-        [[5], [2,6]]           # parameters of process options F1 and F2
-        ]
-
     # read parameter ranges from file
-    
-    para_ranges = [ 
-        [-np.pi,np.pi],      # parameter range of x1
-        [-np.pi,np.pi],      # parameter range of x2
-        [-np.pi,np.pi],      # parameter range of x3
-        [-np.pi,np.pi],      # parameter range of x4
-        [-np.pi,np.pi],      # parameter range of x5
-        [-np.pi,np.pi],      # parameter range of x6
-        [-np.pi,np.pi]       # parameter range of x7
-    ]
+    paras = collections.OrderedDict()
+    para_ranges = []
+    for line in open('parameters.txt'):
+        li=line.strip().split('#')[0].strip()
+        if ( (li != '') and not(li.startswith('BeginParams')) and not(li.startswith('EndParams')) ):
+            # print(li)
+            para_name = li.split()[0]
+            para_ini  = li.split()[1]
+            para_min  = li.split()[2]
+            para_max  = li.split()[3]
+
+            paras[para_name]  = [para_ini,para_min,para_max]
+            para_ranges      += [ [np.float(para_min),np.float(para_max)] ]
+
+    # list of parameters that go into each option (numbering starts with 0)
+    # e.g., options_paras_realistic = [ 
+    #                                    [[0], [0,1]],          # parameters of process options A1 and A2
+    #                                    [[1], [2], [3,4]],     # parameters of process options B1, B2, and B3
+    #                                    [[5], [2,6]]           # parameters of process options C1 and C2
+    #                                 ]
+    options_paras_realistic = []
+    for line in open('parameter-process-mapping.txt'):
+        li=line.strip().split('#')[0].strip()
+        if ( (li != '') and not(li.startswith('BeginParams')) and not(li.startswith('EndParams')) ):
+
+            # [[par_x01], [par_x01, par_x02]]   -->   [['par_x01'], ['par_x01', 'par_x02']]
+            li = li.replace('[','').replace(' ','').split('],')
+            li = [ s.replace(']','').split(',') for s in li ]
+
+            # find correct ID: [['par_x01'], ['par_x01', 'par_x02']] --> [[0],[0,1]]
+            idx = [ [ paras.keys().index(item) for item in ilist ] for ilist in li ]
+            options_paras_realistic += [idx]
 
     def model_function_realistic(paras, weights, constants=None, run_id=None):
         # input:
