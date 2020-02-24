@@ -106,15 +106,34 @@ if __name__ == '__main__':
 # Function definition - if function
 
     # -------------------------------------------------------------------------
-    # Basin properties (ideally read from a file)
+    # Basin properties (read from file)
     # -------------------------------------------------------------------------
     basin_prop = {}
-    basin_prop['id']          = '08KC001'
-    basin_prop['name']        = 'Salmon River near Prince George'
-    basin_prop['area_km2']    = 4230.0
-    basin_prop['elevation_m'] = 606.0
-    basin_prop['lat_deg']     =  54.09639
-    basin_prop['lon_deg']     = -122.67972
+
+    file_gauge_info = 'basin_physical_characteristics.txt'
+    ff = open(file_gauge_info, "r")
+    lines = ff.readlines()
+    ff.close()
+
+    found = False
+    for ill,ll in enumerate(lines):
+        if ill > 0:
+            tmp = ll.strip().split(';')
+            if (tmp[0] == basin_id):
+                found = True
+                # basin_id; basin_name; lat; lon; area_km2; elevation_m; slope_deg; forest_frac 
+                
+                basin_prop['id']           = str(basin_id)
+                basin_prop['name']         = str(tmp[1].strip())
+                basin_prop['lat_deg']      = np.float(tmp[2].strip())
+                basin_prop['lon_deg']      = np.float(tmp[3].strip())
+                basin_prop['area_km2']     = np.float(tmp[4].strip())
+                basin_prop['elevation_m']  = np.float(tmp[5].strip())
+                basin_prop['slope_deg']    = np.float(tmp[6].strip()) 
+                basin_prop['forest_frac']  = np.float(tmp[7].strip())
+
+    if not(found):
+        raise ValueError('Basin ID not found in '+file_gauge_info)
 
     # -------------------------------------------------------------------------
     # Set processes and options

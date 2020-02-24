@@ -7,7 +7,7 @@ RVI = """
 :WrittenBy         James Craig & Juliane Mai                                                                       
 :CreationDate      June 2019
 #
-# RAVEN run of Salmon River near Prince George using weighted model options                                                        
+# RAVEN run of WSC/USGS {props[id]} ({props[name]}) using weighted model options                                                           
 #------------------------------------------------------------------------
 #
 :StartDate               1989-01-01 00:00:00 # 1954-01-01 00:00:00 
@@ -90,7 +90,7 @@ RVP = """
 :WrittenBy         James Craig & Juliane Mai                                                                       
 :CreationDate      June 2019
 #
-# RAVEN run of Salmon River near Prince George using weighted model options                                                              
+# RAVEN run of WSC/USGS {props[id]} ({props[name]}) using weighted model options                                                             
 #------------------------------------------------------------------------                                 
 #
 
@@ -117,9 +117,9 @@ RVP = """
 # Land Use Classes
 #-----------------------------------------------------------------
 :LandUseClasses, 
-  :Attributes,        IMPERM,    FOREST_COV, 
-       :Units,          frac,          frac, 
-       FOREST,           0.0,           1.0,    
+  :Attributes,        IMPERM,           FOREST_COV, 
+       :Units,          frac,                 frac, 
+       FOREST,           0.0, {props[forest_frac]},    
 :EndLandUseClasses
 
 #-----------------------------------------------------------------
@@ -212,7 +212,7 @@ RVC = """
 :WrittenBy         James Craig & Juliane Mai                                                                       
 :CreationDate      June 2019
 #
-# RAVEN run of Salmon River near Prince George using weighted model options                                                           
+# RAVEN run of WSC/USGS {props[id]} ({props[name]}) using weighted model options                                                        
 #------------------------------------------------------------------------                                 
 #
 
@@ -240,21 +240,20 @@ RVT = """
 :WrittenBy         James Craig & Juliane Mai                                                                       
 :CreationDate      June 2019
 #
-# RAVEN run of Salmon River near Prince George using weighted model options                                                            
+# RAVEN run of WSC/USGS {props[id]} ({props[name]}) using weighted model options                                                             
 #------------------------------------------------------------------------
 
 # meteorological forcings
 :Gauge
-  :Latitude    54.09639
-  :Longitude -122.67972
-  :Elevation  606.0
+  :Latitude   {props[lat_deg]}
+  :Longitude  {props[lon_deg]}
+  :Elevation  {props[elevation_m]}
   #
-  # energy limited  (100% rain+snow = original; dryness index PET/P = 0.734646456)
-  :RedirectToFile data_obs/Salmon-River-Near-Prince-George_meteo_daily.rvt
+  :RedirectToFile data_obs/{props[id]}_meteo_daily.rvt
 :EndGauge
 
 # observed streamflow
-:RedirectToFile data_obs/Salmon-River-Near-Prince-George_Qobs_daily.rvt
+:RedirectToFile data_obs/{props[id]}_Qobs_daily.rvt
 
 """
 
@@ -264,20 +263,20 @@ RVH = """
 :WrittenBy         James Craig & Juliane Mai                                                                       
 :CreationDate      June 2019
 #
-# RAVEN run of Salmon River near Prince George using weighted model options                                                            
+# RAVEN run of WSC/USGS {props[id]} ({props[name]}) using weighted model options                                                             
 #------------------------------------------------------------------------                            
 #                                                                                                           
 #                                                                                                               
 :SubBasins                                                                                                              
         :Attributes     NAME    DOWNSTREAM_ID   PROFILE   REACH_LENGTH    GAUGED                                                          
         :Units          none    none            none      km              none                                                                                                    
-        1,             hmets,   -1,             NONE,     _AUTO,          1
+        1,       {props[id]},   -1,             NONE,     _AUTO,          1
 :EndSubBasins                                                                                                                           
                                                                                                                 
 :HRUs                                                                                                           
         :Attributes     AREA    ELEVATION  LATITUDE    LONGITUDE  BASIN_ID  LAND_USE_CLASS  VEG_CLASS SOIL_PROFILE AQUIFER_PROFILE TERRAIN_CLASS    SLOPE   ASPECT  
         :Units           km2            m       deg          deg      none            none       none         none            none          none      deg      deg     
-                 1    4230.0,       606.0, 54.09639,  -122.67972,         1          FOREST     FOREST    DEFAULT_P         [NONE]     DEFAULT_T      0.0        0
+                 1    {props[area_km2]} {props[elevation_m]} {props[lat_deg]} {props[lon_deg]}         1          FOREST     FOREST    DEFAULT_P         [NONE]     DEFAULT_T      {props[slope_deg]}        0
 :EndHRUs
 
 """

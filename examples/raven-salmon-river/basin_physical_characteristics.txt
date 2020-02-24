@@ -1,0 +1,2 @@
+basin_id; basin_name; lat; lon; area_km2; elevation_m; slope_deg; forest_frac
+08KC001; SALMON RIVER NEAR PRINCE GEORGE; 54.45653168; -123.35145290; 4230.00000000; 842.92539620; 3.35760243; 0.47636629 
