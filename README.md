@@ -14,7 +14,7 @@ We provide the examples that were used in our publication:
 - Salmon River catchment using RAVEN modeling framework (see [here](https://github.com/julemai/xSSA/wiki/Examples#salmon-river-catchment-using-raven-hydrologic-modeling-framework))
 
 ## Creating Plots
-This GitHub contains all scripts and data to reproduce the plots in the paper and Supplementary Material. Please see the main plotting script [here](https://github.com/julemai/xSSA/figures/plot.sh) and select the figures you want to plot. The final figures will then be found in the folder `figures/pdfs`. All the data used to produce those figures can be found in the folder `examples`. Some results might need to be generated first, i.e., the results of the benchmark runs ([here](https://github.com/julemai/xSSA/wiki/Examples#benchmark-model)) and the Raven example for the Salmon river ([here](https://github.com/julemai/xSSA/wiki/Examples#salmon-river-catchment-using-raven-hydrologic-modeling-framework)).
+This GitHub contains all scripts and data to reproduce the plots in the paper and Supplementary Material. Please see the main plotting script [here](https://github.com/julemai/xSSA/blob/master/figures/plot.sh) and select the figures you want to plot. The final figures will then be found in the folder `figures/pdfs`. All the data used to produce those figures can be found in the folder `examples`. Some results might need to be generated first, i.e., the results of the benchmark runs ([here](https://github.com/julemai/xSSA/wiki/Examples#benchmark-model)) and the Raven example for the Salmon river ([here](https://github.com/julemai/xSSA/wiki/Examples#salmon-river-catchment-using-raven-hydrologic-modeling-framework)).
 
 ## Citation
 
