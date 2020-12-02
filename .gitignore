@@ -1,5 +1,20 @@
 **.pyc
 **.DS_Store
 
-examples/*/*.pkl
+# model executables
 examples/*/model/*.exe
+
+# any results of benchmarking
+examples/*/*/*.pkl
+examples/*/*/*/*.pkl
+
+# any xSSA results of Raven
+examples/data_out/*/*.token
+examples/data_out/*/*.nc
+examples/data_out/*/*.pkl
+examples/data_out/*/*.csv
+
+# produced figures
+figures/pdfs/*.pdf
+
+examples_save
