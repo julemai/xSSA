@@ -28,5 +28,5 @@ https://doi.org/10.5194/hess-2020-215
 Mai, J., Craig, J. R., and Tolson, B. A. (2020).<br>
 Simultaneously Determining Global Sensitivities of Model Parameters and Model Structure. <br>
 *Zenodo*<br>
-https://doi.org/10.5281/zenodo.???
+https://doi.org/10.5281/zenodo.4301003
 
