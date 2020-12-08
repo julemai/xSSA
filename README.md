@@ -20,9 +20,9 @@ This GitHub contains all scripts and data to reproduce the plots in the paper an
 
 ### Journal Publication
 Mai, J., Craig, J. R., and Tolson, B. A. (2020).<br>
-Simultaneously Determining Global Sensitivities of Model Parameters and Model Structure. <br>
-*Hydrol. Earth Syst. Sci.*, accepted. <br>
-https://doi.org/10.5194/hess-2020-215
+Simultaneously determining global sensitivities of model parameters and model structure. <br>
+*Hydrol. Earth Syst. Sci.*, 24, 5835–5858.<br>
+https://doi.org/10.5194/hess-24-5835-2020
 
 ### Code Publication
 Mai, J., Craig, J. R., and Tolson, B. A. (2020).<br>
