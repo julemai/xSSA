@@ -25,7 +25,7 @@
 from __future__ import print_function
 
 """
-Benchmark example to test Sobol' sensitivity analysis for models with multiple process options. 
+Benchmark example to test Sobol' sensitivity analysis for models with multiple process options.
 The hydrologic modeling framework RAVEN is employed here.
 
 History
@@ -48,12 +48,12 @@ if __name__ == '__main__':
     nboot       = 1                  # Set to 1 for single run of SI and STI calculation
     basin_id    = None
     tmp_folder  = "/tmp/xSSA_test/"   # temporary folder to run model
-    
+
     parser   = argparse.ArgumentParser(formatter_class=argparse.RawDescriptionHelpFormatter,
                                       description='''Benchmark example to test Sensitivity Analysis for models with multiple process options.''')
     parser.add_argument('-o', '--type', action='store',
                         default=outtype, dest='outtype', metavar='outtype',
-                        help='Output type is pkl, msgpack, json, or nc (default: nc).')
+                        help='Output type is pkl, json, or nc (default: nc).')
     parser.add_argument('-b', '--nboot', action='store',
                         default=nboot, dest='nboot', metavar='nboot',
                         help='Number of bootstrap samples (default: nboot=10).')
@@ -68,14 +68,14 @@ if __name__ == '__main__':
                         help='Temporary directory to run the model. (default: "/tmp/juletest/").')
 
     args       = parser.parse_args()
-    outtype  = args.outtype
-    nboot      = np.int(args.nboot)
-    nsets      = np.int(args.nsets)
+    outtype    = args.outtype
+    nboot      = int(args.nboot)
+    nsets      = int(args.nsets)
     basin_ids  = args.basin_ids
     tmp_folder = args.tmp_folder
     print('tmp_folder: ',tmp_folder)
 
-    # convert basin_ids to list 
+    # convert basin_ids to list
     basin_ids = basin_ids.strip()
     basin_ids = " ".join(basin_ids.split())
     basin_ids = basin_ids.split()
@@ -88,14 +88,14 @@ if __name__ == '__main__':
     # add subolder scripts/lib to search path
     # -----------------------
     import sys
-    import os 
+    import os
     dir_path = os.path.dirname(os.path.realpath(__file__))
     sys.path.append(dir_path+'/../lib')
 
 
     # -------------------------------------------------------------------------
     # Function definition - if function
-    #    
+    #
 
     # Basin ID need to be specified
     if basin_ids is None:
@@ -105,7 +105,7 @@ if __name__ == '__main__':
     # add subolder scripts/lib to search path
     # -----------------------
     import sys
-    import os 
+    import os
     dir_path = os.path.dirname(os.path.realpath(__file__))
     sys.path.append(dir_path+'/lib')
 
@@ -119,17 +119,17 @@ if __name__ == '__main__':
     from   pathlib2        import Path
     import subprocess
     import shutil
-    
+
     from   fread           import fread        # in lib/
     from   autostring      import astr         # in lib/
-    
+
     t1 = time.time()
 
     for basin_id in basin_ids:
 
-        if not( outtype in ['nc', 'pkl', 'json', 'msgpack'] ):
-            raise ValueError("Output type (option t) must be one of the following: ['nc', 'pkl', 'json', 'msgpack']")
-    
+        if not( outtype in ['nc', 'pkl', 'json'] ):
+            raise ValueError("Output type (option t) must be one of the following: ['nc', 'pkl', 'json']")
+
         # -------------------------------------------------------------------------
         # Set processes and options
         # -------------------------------------------------------------------------
@@ -151,7 +151,7 @@ if __name__ == '__main__':
 
         # ----------------------------------
         # para_ranges
-        # ---------------------------------- 
+        # ----------------------------------
         ff = open("../data_in/data_model/"+basin_id+"/parameters.txt", "r")
         lines = ff.readlines()
         found = False
@@ -167,10 +167,10 @@ if __name__ == '__main__':
                     if not( ll.strip().startswith("#") ):
                         ll_tmp = re.sub(' +', ' ',ll.strip())
                         init_val = ll_tmp.split()[1]
-                        min_val = np.float(ll_tmp.split()[2])
-                        max_val = np.float(ll_tmp.split()[3])
+                        min_val = float(ll_tmp.split()[2])
+                        max_val = float(ll_tmp.split()[3])
                         para_ranges += [[min_val,max_val]]
-                    
+
         ff.close()
 
         max_para_id = np.max([ np.max([ np.max(oo[ii]) for ii in range(len(oo)) if len(oo[ii])>0 ]) for oo in options_paras_raven ])
@@ -195,20 +195,20 @@ if __name__ == '__main__':
                 tmp = ll.strip().split(';')
                 if (tmp[0] == basin_id):
                     found = True
-                    # basin_id; basin_name; lat; lon; area_km2; elevation_m; slope_deg; forest_frac 
-                    
+                    # basin_id; basin_name; lat; lon; area_km2; elevation_m; slope_deg; forest_frac
+
                     basin_prop['id']           = str(basin_id)
                     basin_prop['name']         = str(tmp[1].strip())
-                    basin_prop['lat_deg']      = np.float(tmp[2].strip())
-                    basin_prop['lon_deg']      = np.float(tmp[3].strip())
-                    basin_prop['area_km2']     = np.float(tmp[4].strip())
-                    basin_prop['elevation_m']  = np.float(tmp[5].strip())
-                    basin_prop['slope_deg']    = np.float(tmp[6].strip()) 
-                    basin_prop['forest_frac']  = np.float(tmp[7].strip())
+                    basin_prop['lat_deg']      = float(tmp[2].strip())
+                    basin_prop['lon_deg']      = float(tmp[3].strip())
+                    basin_prop['area_km2']     = float(tmp[4].strip())
+                    basin_prop['elevation_m']  = float(tmp[5].strip())
+                    basin_prop['slope_deg']    = float(tmp[6].strip())
+                    basin_prop['forest_frac']  = float(tmp[7].strip())
 
         if not(found):
             raise ValueError('Basin ID not found in '+file_gauge_info)
-    
+
 
         def model_function_raven(paras, weights, basin_prop, constants=None, run_id=None, tmp_folder=tmp_folder):
             # input:
@@ -283,7 +283,7 @@ if __name__ == '__main__':
             dict_dparas['sum_x09_x10']  = paras[8]+paras[9]           # FIELD_CAPACITY > SAT_WILT
             dict_dparas['pow_x04']      = 10.0**(paras[3])            # BASEFLOW_COEFF TOPSOIL  = 10.0^x4
             dict_dparas['pow_x11']      = 10.0**(paras[10])           # BASEFLOW_COEFF PHREATIC = 10.0^x11
-            
+
             # ---------------
             # paste all paras and weights into template files
             # ---------------
@@ -350,7 +350,7 @@ if __name__ == '__main__':
             writeString( Path(tmp_folder,"raven_weighted_processes.rvp"), RVP.format(par=dict_paras,dpar=dict_dparas,weights=dict_weights,props=basin_prop) )
             writeString( Path(tmp_folder,"raven_weighted_processes.rvh"), RVH.format(par=dict_paras,dpar=dict_dparas,weights=dict_weights,props=basin_prop) )
             writeString( Path(tmp_folder,"raven_weighted_processes.rvt"), RVT.format(par=dict_paras,dpar=dict_dparas,weights=dict_weights,props=basin_prop) )
-            writeString( Path(tmp_folder,"raven_weighted_processes.rvc"), RVC.format(par=dict_paras,dpar=dict_dparas,weights=dict_weights,props=basin_prop) )        
+            writeString( Path(tmp_folder,"raven_weighted_processes.rvc"), RVC.format(par=dict_paras,dpar=dict_dparas,weights=dict_weights,props=basin_prop) )
 
             # link executable
             # print("path = ",str(Path(tmp_folder,os.path.basename(raven_exe_name))))
@@ -366,10 +366,10 @@ if __name__ == '__main__':
             # makeDirectories(Path(tmp_folder,"output"))
             out_folder = str(Path(tmp_folder,"output"))
             os.makedirs(out_folder)
-            
+
             # ---------------
             # run the model with these input rv* files
-            # ---------------        
+            # ---------------
             cmd = [str(Path(tmp_folder,os.path.basename(raven_exe_name))),str(Path(tmp_folder,"raven_weighted_processes")),"-o",str(Path(tmp_folder,"output"))+'/']
 
             print("Raven run folder: ",tmp_folder)
@@ -383,7 +383,7 @@ if __name__ == '__main__':
             for line in process.stdout:
                 print(">>> ",line.rstrip()) # rstrip removes trailing \n
 
-            if not(os.path.exists(str(Path(tmp_folder,"output","Diagnostics.csv")))):            
+            if not(os.path.exists(str(Path(tmp_folder,"output","Diagnostics.csv")))):
                 print("")
                 print("ERROR: No Diagnostics.csv produced")
                 print("")
@@ -411,7 +411,7 @@ if __name__ == '__main__':
             icol = 2  # starting with 0 and assuming "," as delimiter
 
             # print("lines: ",lines)
-            model['nse'] = np.float((lines[irow]).split(',')[icol])
+            model['nse'] = float((lines[irow]).split(',')[icol])
             print("NSE:     ",model['nse'])
             print("")
 
@@ -427,7 +427,7 @@ if __name__ == '__main__':
             icol = 3  # starting with 0 and assuming "," as delimiter
 
             # print("lines: ",lines)
-            model['rmse'] = np.float((lines[irow]).split(',')[icol])
+            model['rmse'] = float((lines[irow]).split(',')[icol])
             print("RMSE:     ",model['rmse'])
             print("")
 
@@ -443,10 +443,10 @@ if __name__ == '__main__':
             icol = 4  # starting with 0 and assuming "," as delimiter
 
             # print("lines: ",lines)
-            model['kge'] = np.float((lines[irow]).split(',')[icol])
+            model['kge'] = float((lines[irow]).split(',')[icol])
             print("KGE:     ",model['kge'])
             print("")
-            
+
             # ---------------
             # extract model output: Hydrographs: simulated Q
             # ---------------
@@ -462,8 +462,8 @@ if __name__ == '__main__':
             return model
 
 
-    
-    
+
+
         # ----------------------------------------------------
         # Sensitivity Analysis of 'raven setup'
         # ----------------------------------------------------
@@ -489,14 +489,6 @@ if __name__ == '__main__':
                                                                                           constants=None,
                                                                                           nsets=nsets,
                                                                                           save_pkl=outpath+"/results_nsets"+str(nsets)+".pkl")
-            elif outtype == 'msgpack':
-                sobol_indexes_raven = sa_model_multiple_processes.sa_model_multiple_processes(options_paras_raven,
-                                                                                          para_ranges,
-                                                                                          model_function_raven,
-                                                                                          basin_prop,
-                                                                                          constants=None,
-                                                                                          nsets=nsets,
-                                                                                          save_msgpack=outpath+"/results_nsets"+str(nsets)+".msgpack")
             elif outtype == 'json':
                 sobol_indexes_raven = sa_model_multiple_processes.sa_model_multiple_processes(options_paras_raven,
                                                                                           para_ranges,
@@ -506,7 +498,7 @@ if __name__ == '__main__':
                                                                                           nsets=nsets,
                                                                                           save_json=outpath+"/results_nsets"+str(nsets)+".json")
             else:
-                raise ValueError("Output type (option t) must be one of the following: ['nc', 'pkl', 'json', 'msgpack']")
+                raise ValueError("Output type (option t) must be one of the following: ['nc', 'pkl', 'json']")
 
             keys = sobol_indexes_raven['paras']['si'].keys()
 
@@ -517,42 +509,42 @@ if __name__ == '__main__':
                 print("---------------------")
                 print(ikey)
                 print("---------------------")
-                
+
                 # scalar model output (such as NSE)
                 if (len(np.shape(sobol_indexes_raven['paras']['si'][ikey])) == 1):
                     # parameter sensitivities
                     print("   si  numeric  (x1,x2,x3,...,w1,w2,w3,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['paras']['si'][ikey] ])
                     print("   sti numeric  (x1,x2,x3,...,w1,w2,w3,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['paras']['sti'][ikey] ])
-                    
+
                     # process option sensitivities
                     print("   si  numeric  (a1,a2,a3,...,w1,w2,w3,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['process_options']['si'][ikey] ])
                     print("   sti numeric  (a1,a2,a3,...,w1,w2,w3,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['process_options']['sti'][ikey] ])
-                    
+
                     # process sensitivities
                     print("   si  numeric  (A,B,C,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['processes']['si'][ikey] ])
                     print("   sti numeric  (A,B,C,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['processes']['sti'][ikey] ])
-                    
+
                 # 1D model output (such as discharge time series)
                 if (len(np.shape(sobol_indexes_raven['paras']['si'][ikey])) == 2):
                     # parameter sensitivities
                     print("   mean si  numeric  (x1,x2,x3,...,w1,w2,w3,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['paras']['msi'][ikey] ])
                     print("   mean sti numeric  (x1,x2,x3,...,w1,w2,w3,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['paras']['msti'][ikey] ])
-                    
+
                     # process option sensitivities
                     print("   mean si  numeric  (a1,a2,a3,...,w1,w2,w3,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['process_options']['msi'][ikey] ])
                     print("   mean sti numeric  (a1,a2,a3,...,w1,w2,w3,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['process_options']['msti'][ikey] ])
-                    
+
                     # process sensitivities
                     print("   mean si  numeric  (A,B,C,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['processes']['msi'][ikey] ])
                     print("   mean sti numeric  (A,B,C,...) = ",[ astr(pp,prec=5) if ~np.isnan(pp) else "nan" for pp in sobol_indexes_raven['processes']['msti'][ikey] ])
 
 
         if False:
-            
+
             print('--------------------------------------------')
             print('SA FOR INDIVIDUAL MODELS')
             print('--------------------------------------------')
-    
+
             noptions = np.array([ len(oo) for oo in options_paras_raven ])
             nprocess = len(options_paras_raven)
 
@@ -585,7 +577,5 @@ if __name__ == '__main__':
                                                         nnparas = npara_m + npara_n + npara_o + npara_p + npara_q + npara_r + npara_s + npara_t + npara_u + npara_v + npara_w
 
                                                         model_runs += nsets * (nnparas+2)
-                                    
+
             print("Total number of model runs required: ",model_runs)
-
-
