@@ -19,7 +19,7 @@ msgpack-numpy==0.4.4.3
 netCDF4==1.5.3
 networkx==2.4
 numexpr==2.7.0
-numpy==1.17.4
+numpy==1.22.0
 pandas==0.25.3
 parso==0.5.1
 pathlib2==2.3.5
